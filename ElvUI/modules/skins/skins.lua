@@ -164,9 +164,7 @@ function S:HandleTab(tab)
 
 	tab.backdrop = CreateFrame("Frame", nil, tab);
 	tab.backdrop:SetTemplate("Default");
-	if tab and tab:GetFrameLevel() > 0 then
-		tab.backdrop:SetFrameLevel(tab:GetFrameLevel() - 1);
-	end
+	tab.backdrop:SetFrameLevel(tab:GetFrameLevel() - 1);
 	tab.backdrop:Point("TOPLEFT", 10, E.PixelMode and -1 or -3);
 	tab.backdrop:Point("BOTTOMRIGHT", -10, 3);
 end

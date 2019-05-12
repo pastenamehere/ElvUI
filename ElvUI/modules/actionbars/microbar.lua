@@ -134,9 +134,6 @@ function AB:UpdateMicroButtons()
 	-- else
 		-- PVPMicroButtonTexture:SetDesaturated(false)
 	-- end
-	
-	GuildMicroButtonTabard:ClearAllPoints()
-	GuildMicroButtonTabard:Point("TOP", GuildMicroButton.backdrop, "TOP", 0, 25)
 
 	self:UpdateMicroPositionDimensions()
 end

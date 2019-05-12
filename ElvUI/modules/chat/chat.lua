@@ -1703,8 +1703,11 @@ function CH:DefaultSmileys()
 	CH:AddSmiley('D:<',		format(t,'rage'))
 	CH:AddSmiley(':o3',		format(t,'scream_cat'))
 	CH:AddSmiley('XP',		format(t,'stuck_out_tongue_closed_eyes'))
-	CH:AddSmiley('8%-%)',	format(t,'sunglasses'))
-	CH:AddSmiley('8%)',		format(t,'sunglasses'))
+	CH:AddSmiley('B%-%)',	format(t,'sunglasses'))
+	CH:AddSmiley('B%)',		format(t,'sunglasses'))
+	-- some messanges include 8) like not smile, so I remove that, ok?
+	--CH:AddSmiley('8%-%)',	format(t,'sunglasses'))
+	--CH:AddSmiley('8%)',		format(t,'sunglasses'))
 	CH:AddSmiley(':%+1:',	format(t,'thumbs_up'))
 	CH:AddSmiley(':;:',		format(t,'semi_colon'))
 	CH:AddSmiley(';o;',		format(t,'sob'))
@@ -1938,14 +1941,6 @@ function CH:Initialize()
 	CombatLogQuickButtonFrame_CustomAdditionalFilterButton:Size(20, 22)
 	CombatLogQuickButtonFrame_CustomAdditionalFilterButton:Point("TOPRIGHT", CombatLogQuickButtonFrame_Custom, "TOPRIGHT", 0, -1)
 	CombatLogQuickButtonFrame_CustomAdditionalFilterButton:SetHitRectInsets(0, 0, 0, 0)
-
-	for i = 1, NUM_CHAT_WINDOWS do
-		local chatButtonFrame = _G["ChatFrame"..i.."ButtonFrame2"]
-
-		if chatButtonFrame then
-			chatButtonFrame:Hide()
-		end
-	end
 
 	self:Panels_ColorUpdate()
 end

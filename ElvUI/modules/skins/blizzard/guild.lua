@@ -29,8 +29,8 @@ local function LoadSkin()
 	end
     
     for i = 1, 4 do
-        _G["GuildFrameRightTab"..i]:SetFrameLevel(6)
-		S:HandleTab(_G["GuildFrameRightTab"..i])
+        _G["GuildFrameTab"..i]:SetFrameLevel(6)
+		S:HandleTab(_G["GuildFrameTab"..i])
 	end
 
 	GuildRosterContainer:StripTextures()

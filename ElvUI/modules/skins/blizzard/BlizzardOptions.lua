@@ -10,7 +10,19 @@ local IsShiftKeyDown = IsShiftKeyDown
 
 local function LoadSkin()
 	if E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.BlizzardOptions ~= true then return end
-
+	
+	-- Магазин
+	GameMenuButtonStore:SetPoint("TOP",GameMenuButtonHelp,"BOTTOM",0,-1);
+	S:HandleButton(GameMenuButtonStore);
+	
+	-- Промокоды
+	GameMenuButtonPromoCodes:SetPoint("TOP",GameMenuButtonStore,"BOTTOM",0,-1);
+	S:HandleButton(GameMenuButtonPromoCodes);
+	
+	-- ACP; будет lua error, если выключен
+	GameMenuButtonAddOns:SetPoint("TOP",GameMenuButtonKeybindings,"BOTTOM",0,-1);
+	S:HandleButton(GameMenuButtonAddOns);
+	
 	-- Game Menu Interface/Tabs
 	for i = 1, 2 do
 		local tab = _G["InterfaceOptionsFrameTab"..i]
@@ -636,7 +648,7 @@ local function LoadSkin()
 				swatch.backdrop:SetFrameLevel(swatch:GetParent():GetFrameLevel() + 1)
 			end
 		end
-	end)
+	end)	
 end
 
 S:AddCallback("SkinBlizzard", LoadSkin)

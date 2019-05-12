@@ -5,6 +5,14 @@ local LSM = LibStub("LibSharedMedia-3.0");
 E.ReminderBuffs = RB;
 
 RB.Spell1Buffs = {
+	
+	270006, -- Настой сопротивления
+	270007, -- Настой Драконьего разума
+	270008, -- Настой Сила титана
+	270009, -- Настой Текущей воды
+	270010, -- Настой Стальной Кожи
+	270011, -- Настой Крепости
+
 	67016, -- Flask of the North (SP)
 	67017, -- Flask of the North (AP)
 	67018, -- Flask of the North (STR)

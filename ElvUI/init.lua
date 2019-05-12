@@ -100,15 +100,19 @@ function AddOn:OnInitialize()
 
 	GameMenuButtonRatings:HookScript("OnShow", function(self)
 		GameMenuFrame:SetHeight(GameMenuFrame:GetHeight() + self:GetHeight());
+		GameMenuFrame:SetHeight(GameMenuFrame:GetHeight()+25);
 	end)
 	GameMenuButtonRatings:HookScript("OnHide", function(self)
 		GameMenuFrame:SetHeight(GameMenuFrame:GetHeight() - self:GetHeight());
+		GameMenuFrame:SetHeight(GameMenuFrame:GetHeight()-25);
 	end)
 
 	GameMenuFrame:HookScript("OnShow", function()
 		GameMenuFrame:SetHeight(GameMenuFrame:GetHeight() + GameMenuButtonContinue:GetHeight() + 1);
+		GameMenuFrame:SetHeight(GameMenuFrame:GetHeight()+25);
         if ElvUI_ButtonAddons ~= nil then
             GameMenuFrame:SetHeight(GameMenuFrame:GetHeight() + GameMenuButtonContinue:GetHeight() + 1);
+			GameMenuFrame:SetHeight(GameMenuFrame:GetHeight()+25);
             GameMenuButtonLogout:SetPoint("TOP", ElvUI_ButtonAddons, "BOTTOM", 0, -16);
         end
 

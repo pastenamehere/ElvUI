@@ -10,9 +10,11 @@ local function LoadSkin()
 
 	TaxiFrame:StripTextures();
 
+	TaxiPortrait:Kill();
+
 	S:HandleCloseButton(TaxiCloseButton);
 
 	TaxiRouteMap:CreateBackdrop("Default");
 end
 
--- S:AddCallback("Taxi", LoadSkin);
+S:AddCallback("Taxi", LoadSkin);

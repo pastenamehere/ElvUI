@@ -102,6 +102,7 @@ V["skins"] = {
 		["tradeskill"] = true,
 		["trainer"] = true,
 		["tutorial"] = true,
+		["watchframe"] = false,
 		["worldmap"] = true,
 		["mirrorTimers"] = true
 	},

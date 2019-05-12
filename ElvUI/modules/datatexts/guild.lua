@@ -178,7 +178,7 @@ local function OnClick(_, btn)
 
 		EasyMenu(menuList, menuFrame, "cursor", 0, 0, "MENU", 2)
 	else
-		GuildFrame_Toggle()
+		ToggleFriendsFrame(3)
 	end
 end
 
