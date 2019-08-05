@@ -393,7 +393,7 @@ end
 
 function S:HandleCloseButton(f, point, text)
 		if not f then
-						return
+			return
 		end
 
 	f:StripTextures();
