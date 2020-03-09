@@ -1,17 +1,16 @@
 local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
-local UF = E:GetModule("UnitFrames");
-
+local UF = E:GetModule("UnitFrames")
 local _, ns = ...
 local ElvUF = ns.oUF
 assert(ElvUF, "ElvUI was unable to locate oUF.")
 
---Cache global variables
 --Lua functions
 local _G = _G
+local format = string.format
 --WoW API / Variables
 local CreateFrame = CreateFrame
+local GetInstanceInfo = GetInstanceInfo
 local InCombatLockdown = InCombatLockdown
-local IsInInstance = IsInInstance
 local RegisterStateDriver = RegisterStateDriver
 local UnregisterStateDriver = UnregisterStateDriver
 
@@ -27,27 +26,20 @@ function UF:Construct_PartyFrames()
 	self.SHADOW_SPACING = 3
 	if self.isChild then
 		self.Health = UF:Construct_HealthBar(self, true)
-
 		self.MouseGlow = UF:Construct_MouseGlow(self)
 		self.TargetGlow = UF:Construct_TargetGlow(self)
 		self.Name = UF:Construct_NameText(self)
+		self.RaidTargetIndicator = UF:Construct_RaidIcon(self)
+
 		self.originalParent = self:GetParent()
 
-		local childDB = UF.db["units"]["party"].petsGroup
 		self.childType = "pet"
 		if self == _G[self.originalParent:GetName().."Target"] then
-			childDB = UF.db["units"]["party"].targetsGroup
 			self.childType = "target"
 		end
 
 		self.unitframeType = "party"..self.childType
-
-		self:SetAttribute("initial-width", childDB.width)
-		self:SetAttribute("initial-height", childDB.height)
 	else
-		self:SetAttribute("initial-width", UF.db["units"]["party"].width)
-		self:SetAttribute("initial-height", UF.db["units"]["party"].height)
-
 		self.Health = UF:Construct_HealthBar(self, true, true, "RIGHT")
 
 		self.Power = UF:Construct_PowerBar(self, true, true, "LEFT")
@@ -72,17 +64,21 @@ function UF:Construct_PartyFrames()
 		self.ReadyCheckIndicator = UF:Construct_ReadyCheckIcon(self)
 		self.HealCommBar = UF:Construct_HealComm(self)
 		self.GPS = UF:Construct_GPS(self)
-		--self.Castbar = UF:Construct_Castbar(self)
 		self.customTexts = {}
+
+		self.Castbar = UF:Construct_Castbar(self)
+
 		self.unitframeType = "party"
 	end
 
-	self.Range = UF:Construct_Range(self)
+	self.Fader = UF:Construct_Fader()
+	self.Cutaway = UF:Construct_Cutaway(self)
 
 	UF:Update_StatusBars()
 	UF:Update_FontStrings()
 
-	UF:Update_PartyFrames(self, UF.db["units"]["party"])
+	self.db = UF.db.units.party
+	self.PostCreate = UF.Update_PartyFrames
 
 	return self
 end
@@ -90,19 +86,22 @@ end
 function UF:Update_PartyHeader(header, db)
 	header.db = db
 
-	if not header.positioned then
-		header:ClearAllPoints()
-		header:Point("BOTTOMLEFT", E.UIParent, "BOTTOMLEFT", 4, 195)
+	local headerHolder = header:GetParent()
+	headerHolder.db = db
 
-		E:CreateMover(header, header:GetName() .. "Mover", L["Party Frames"], nil, nil, nil, "ALL,PARTY,ARENA")
-		header.positioned = true
+	if not headerHolder.positioned then
+		headerHolder:ClearAllPoints()
+		headerHolder:Point("BOTTOMLEFT", E.UIParent, "BOTTOMLEFT", 4, 195)
 
-		header:RegisterEvent("PLAYER_LOGIN")
-		header:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-		header:SetScript("OnEvent", UF["PartySmartVisibility"])
+		E:CreateMover(headerHolder, headerHolder:GetName().."Mover", L["Party Frames"], nil, nil, nil, "ALL,PARTY,ARENA", nil, "unitframe,party,generalGroup")
+		headerHolder.positioned = true
+
+		headerHolder:RegisterEvent("PLAYER_LOGIN")
+		headerHolder:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+		headerHolder:SetScript("OnEvent", UF.PartySmartVisibility)
 	end
 
-	UF.PartySmartVisibility(header)
+	UF.PartySmartVisibility(headerHolder)
 end
 
 function UF:PartySmartVisibility(event)
@@ -111,14 +110,16 @@ function UF:PartySmartVisibility(event)
 		return
 	end
 
-	if event == "PLAYER_REGEN_ENABLED" then self:UnregisterEvent("PLAYER_REGEN_ENABLED") end
+	if event == "PLAYER_REGEN_ENABLED" then
+		self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+	end
 
 	if not InCombatLockdown() then
-		local inInstance, instanceType = IsInInstance()
-		if inInstance and (instanceType == "raid" or instanceType == "pvp") then
+		local _, instanceType = GetInstanceInfo()
+		if instanceType == "raid" or instanceType == "pvp" then
 			UnregisterStateDriver(self, "visibility")
-			self:Hide()
 			self.blockVisibilityChanges = true
+			self:Hide()
 		elseif self.db.visibility then
 			RegisterStateDriver(self, "visibility", self.db.visibility)
 			self.blockVisibilityChanges = false
@@ -129,7 +130,11 @@ function UF:PartySmartVisibility(event)
 end
 
 function UF:Update_PartyFrames(frame, db)
-	frame.db = db
+	if not db then
+		db = frame.db
+	else
+		frame.db = db
+	end
 
 	frame.Portrait = frame.Portrait or (db.portrait.style == "2D" and frame.Portrait2D or frame.Portrait3D)
 	frame.colors = ElvUF.colors
@@ -166,7 +171,6 @@ function UF:Update_PartyFrames(frame, db)
 		frame.USE_INFO_PANEL = not frame.USE_MINI_POWERBAR and not frame.USE_POWERBAR_OFFSET and db.infoPanel.enable
 		frame.INFO_PANEL_HEIGHT = frame.USE_INFO_PANEL and db.infoPanel.height or 0
 
-		frame.HAPPINESS_WIDTH = 0
 		frame.BOTTOM_OFFSET = UF:GetHealthBottomOffset(frame)
 
 		frame.VARIABLES_SET = true
@@ -192,6 +196,9 @@ function UF:Update_PartyFrames(frame, db)
 			childDB = db.targetsGroup
 		end
 
+		frame.UNIT_WIDTH = childDB.width
+		frame.UNIT_HEIGHT = childDB.height
+
 		if not frame.originalParent.childList then
 			frame.originalParent.childList = {}
 		end
@@ -208,16 +215,27 @@ function UF:Update_PartyFrames(frame, db)
 				UnregisterUnitWatch(frame)
 				frame:SetParent(E.HiddenFrame)
 			end
+		else
+			if childDB.enable then
+				frame:SetAttribute("initial-anchor", format("%s,%s,%d,%d", E.InversePoints[childDB.anchorPoint], childDB.anchorPoint, childDB.xOffset, childDB.yOffset))
+				frame:SetAttribute("initial-width", frame.UNIT_WIDTH)
+				frame:SetAttribute("initial-height", frame.UNIT_HEIGHT)
+			end
 		end
 
 		--Health
 		UF:Configure_HealthBar(frame)
+
+		UF:Configure_RaidIcon(frame)
 
 		--Name
 		UF:UpdateNameSettings(frame, frame.childType)
 	else
 		if not InCombatLockdown() then
 			frame:Size(frame.UNIT_WIDTH, frame.UNIT_HEIGHT)
+		else
+			frame:SetAttribute("initial-width", frame.UNIT_WIDTH)
+			frame:SetAttribute("initial-height", frame.UNIT_HEIGHT)
 		end
 
 		UF:Configure_InfoPanel(frame)
@@ -237,7 +255,7 @@ function UF:Update_PartyFrames(frame, db)
 
 		UF:Configure_RaidDebuffs(frame)
 
-		--UF:Configure_Castbar(frame)
+		UF:Configure_Castbar(frame)
 
 		UF:Configure_RaidIcon(frame)
 
@@ -260,9 +278,13 @@ function UF:Update_PartyFrames(frame, db)
 		UF:Configure_CustomTexts(frame)
 	end
 
-	UF:Configure_Range(frame)
+	--Fader
+	UF:Configure_Fader(frame)
 
-	frame:UpdateAllElements("ElvUI_UpdateAllElements")
+	--Cutaway
+	UF:Configure_Cutaway(frame)
+
+	frame:UpdateAllElements("ForceUpdate")
 end
 
-UF["headerstoload"]["party"] = {nil, "ELVUI_UNITPET, ELVUI_UNITTARGET"}
+UF.headerstoload.party = {nil, "ELVUI_UNITPET, ELVUI_UNITTARGET"}

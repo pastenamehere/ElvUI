@@ -1,87 +1,72 @@
-local E, L, V, P, G = unpack(select(2, ...))
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
 local S = E:GetModule("Skins")
 
+--Lua functions
 local _G = _G
 local unpack = unpack
-
-local WATCHFRAME_EXPANDEDWIDTH = WATCHFRAME_EXPANDEDWIDTH
+local format = string.format
+--WoW API / Variables
+local GetNumQuestWatches = GetNumQuestWatches
+local GetQuestDifficultyColor = GetQuestDifficultyColor
+local GetQuestIndexForWatch = GetQuestIndexForWatch
+local GetQuestLogTitle = GetQuestLogTitle
+local hooksecurefunc = hooksecurefunc
 
 local function LoadSkin()
-	if E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.watchframe ~= true then return end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.watchframe then return end
 
 	-- WatchFrame Expand/Collapse Button
 	WatchFrameCollapseExpandButton:StripTextures()
-	S:HandleCloseButton(WatchFrameCollapseExpandButton)
-	WatchFrameCollapseExpandButton:Size(32)
-	WatchFrameCollapseExpandButton.text:SetText("-")
-	WatchFrameCollapseExpandButton.text:Point("CENTER", -1, 0)
+	WatchFrameCollapseExpandButton:Size(18)
+	WatchFrameCollapseExpandButton.tex = WatchFrameCollapseExpandButton:CreateTexture(nil, "OVERLAY")
+	WatchFrameCollapseExpandButton.tex:SetTexture(E.Media.Textures.MinusButton)
+	WatchFrameCollapseExpandButton.tex:SetInside()
+	WatchFrameCollapseExpandButton:SetHighlightTexture("Interface\\Buttons\\UI-PlusButton-Hilight", "ADD")
 	WatchFrameCollapseExpandButton:SetFrameStrata("MEDIUM")
-	WatchFrameCollapseExpandButton:Point("TOPRIGHT", -20, 4)
+	WatchFrameCollapseExpandButton:Point("TOPRIGHT", 0, -2)
 
 	hooksecurefunc("WatchFrame_Expand", function()
-		WatchFrameCollapseExpandButton.text:SetText("-")
-
+		WatchFrameCollapseExpandButton.tex:SetTexture(E.Media.Textures.MinusButton)
 		WatchFrame:Width(WATCHFRAME_EXPANDEDWIDTH)
 	end)
 
 	hooksecurefunc("WatchFrame_Collapse", function()
-		WatchFrameCollapseExpandButton.text:SetText("+")
-
+		WatchFrameCollapseExpandButton.tex:SetTexture(E.Media.Textures.PlusButton)
 		WatchFrame:Width(WATCHFRAME_EXPANDEDWIDTH)
 	end)
 
 	-- WatchFrame Text
 	hooksecurefunc("WatchFrame_Update", function()
-		local questIndex
-		local numQuestWatches = GetNumQuestWatches()
+		local questIndex, title, level, color
 
-		local title, level, questTag, daily
-		local color
-		for i = 1, numQuestWatches do
+		for i = 1, GetNumQuestWatches() do
 			questIndex = GetQuestIndexForWatch(i)
 			if questIndex then
-				title, level, questTag, _, _, _, _, daily = GetQuestLogTitle(questIndex)
+				title, level = GetQuestLogTitle(questIndex)
 				color = GetQuestDifficultyColor(level)
---[[
-				local hex = E:RGBToHex(color.r, color.g, color.b)
 
-				if questTag == ELITE then
-					level = level.."+"
-				elseif questTag == LFG_TYPE_DUNGEON then
-					level = level.." D"
-				elseif questTag == PVP then
-					level = level.." PvP"
-				elseif questTag == RAID then
-					level = level.." R"
-				elseif questTag == GROUP then
-					level = level.." G"
-				elseif questTag == PLAYER_DIFFICULTY2 then
-					level = level.." HC"
-				end
-
-				local titleText = hex.."["..level.."]|r "..title
-]]
 				for j = 1, #WATCHFRAME_QUESTLINES do
 					if WATCHFRAME_QUESTLINES[j].text:GetText() == title then
-						--WATCHFRAME_QUESTLINES[j].text:SetText(titleText)
 						WATCHFRAME_QUESTLINES[j].text:SetTextColor(color.r, color.g, color.b)
 						WATCHFRAME_QUESTLINES[j].color = color
 					end
 				end
-				
-				for k = 1, #WATCHFRAME_ACHIEVEMENTLINES do
-					WATCHFRAME_ACHIEVEMENTLINES[k].color = nil
-				end
 			end
+		end
+
+		for i = 1, #WATCHFRAME_ACHIEVEMENTLINES do
+			WATCHFRAME_ACHIEVEMENTLINES[i].color = nil
 		end
 
 		-- WatchFrame Items
 		for i = 1, WATCHFRAME_NUM_ITEMS do
 			local button = _G["WatchFrameItem"..i]
-			local icon = _G["WatchFrameItem"..i.."IconTexture"]
-			local normal = _G["WatchFrameItem"..i.."NormalTexture"]
-			local cooldown = _G["WatchFrameItem"..i.."Cooldown"]
-			if not button.isSkinned then
+
+			if button and not button.isSkinned then
+				local icon = _G["WatchFrameItem"..i.."IconTexture"]
+				local normal = _G["WatchFrameItem"..i.."NormalTexture"]
+				local cooldown = _G["WatchFrameItem"..i.."Cooldown"]
+
 				button:CreateBackdrop()
 				button.backdrop:SetAllPoints()
 				button:StyleButton()
@@ -102,8 +87,10 @@ local function LoadSkin()
 	-- WatchFrame Highlight
 	hooksecurefunc("WatchFrameLinkButtonTemplate_Highlight", function(self, onEnter)
 		local line
+
 		for index = self.startLine, self.lastLine do
 			line = self.lines[index]
+
 			if line then
 				if index == self.startLine then
 					if onEnter then
@@ -121,9 +108,16 @@ local function LoadSkin()
 	end)
 
 	-- WatchFrame POI Buttons
+	local function poi_OnEnter(self)
+		self.bg:SetBackdropBorderColor(unpack(E.media.rgbvaluecolor))
+	end
+
+	local function poi_OnLeave(self)
+		self.bg:SetBackdropBorderColor(unpack(E.media.bordercolor))
+	end
+
 	hooksecurefunc("QuestPOI_DisplayButton", function(parentName, buttonType, buttonIndex)
-		local buttonName = "poi"..parentName..buttonType.."_"..buttonIndex
-		local poiButton = _G[buttonName]
+		local poiButton = _G[format("poi%s%s_%d", parentName, buttonType, buttonIndex)]
 
 		if poiButton and parentName == "WatchFrameLines" then
 			if not poiButton.isSkinned then
@@ -141,12 +135,8 @@ local function LoadSkin()
 				poiButton.bg:Point("BOTTOMRIGHT", -6, 6)
 				poiButton.bg:SetFrameLevel(poiButton.bg:GetFrameLevel() - 1)
 
-				poiButton:HookScript("OnEnter", function(self)
-					self.bg:SetBackdropBorderColor(unpack(E["media"].rgbvaluecolor))
-				end)
-				poiButton:HookScript("OnLeave", function(self)
-					self.bg:SetBackdropBorderColor(unpack(E["media"].bordercolor))
-				end)
+				poiButton:HookScript("OnEnter", poi_OnEnter)
+				poiButton:HookScript("OnLeave", poi_OnLeave)
 
 				poiButton.isSkinned = true
 			end
@@ -155,15 +145,15 @@ local function LoadSkin()
 
 	hooksecurefunc("QuestPOI_SelectButton", function(poiButton)
 		if poiButton and poiButton.bg then
-			poiButton.bg:SetBackdropColor(unpack(E["media"].rgbvaluecolor))
+			poiButton.bg:SetBackdropColor(unpack(E.media.rgbvaluecolor))
 		end
 	end)
 
 	hooksecurefunc("QuestPOI_DeselectButton", function(poiButton)
 		if poiButton and poiButton.bg then
-			poiButton.bg:SetBackdropColor(unpack(E["media"].backdropcolor))
+			poiButton.bg:SetBackdropColor(unpack(E.media.backdropcolor))
 		end
 	end)
 end
 
-S:AddCallback("WatchFrame", LoadSkin)
+S:AddCallback("Skin_WatchFrame", LoadSkin)

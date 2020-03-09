@@ -1,11 +1,11 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/">
-	<Script file="blizzard.lua"/>
-	<Script file="alertframe.lua"/>
-	<Script file="colorpicker.lua"/>
-	<Script file="kill.lua"/>
-	<Script file="watchframe.lua"/>
-	<Script file="vehicle.lua"/>
-	<Script file="gm.lua"/>
-	<Script file="durability.lua"/>
-	<Script file="capturebar.lua"/>
+	<Script file="Blizzard.lua"/>
+	<Script file="AlertFrame.lua"/>
+	<Script file="ColorPicker.lua"/>
+	<Script file="Kill.lua"/>
+	<Script file="WatchFrame.lua"/>
+	<Script file="Vehicle.lua"/>
+	<Script file="GM.lua"/>
+	<Script file="Durability.lua"/>
+	<Script file="CaptureBar.lua"/>
 </Ui>

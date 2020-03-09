@@ -1,70 +1,133 @@
-local E, L, V, P, G = unpack(select(2, ...));
-local S = E:GetModule("Skins");
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local S = E:GetModule("Skins")
+
+--Lua functions
+local _G = _G
+local unpack = unpack
+--WoW API / Variables
 
 local function LoadSkin()
-	if E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.macro ~= true then return end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.macro then return end
 
-	S:HandleCloseButton(MacroFrameCloseButton);
+	MacroFrame:StripTextures()
+	MacroFrame:CreateBackdrop("Transparent")
+	MacroFrame.backdrop:Point("TOPLEFT", 11, -12)
+	MacroFrame.backdrop:Point("BOTTOMRIGHT", -32, 76)
 
-	S:HandleScrollBar(MacroButtonScrollFrameScrollBar);
-	S:HandleScrollBar(MacroFrameScrollFrameScrollBar);
-	S:HandleScrollBar(MacroPopupScrollFrameScrollBar);
+	S:SetUIPanelWindowInfo(MacroFrame, "width")
+	S:SetBackdropHitRect(MacroFrame)
 
-	local Buttons = { "MacroFrameTab1", "MacroFrameTab2", "MacroDeleteButton", "MacroNewButton", "MacroExitButton", "MacroEditButton", "MacroPopupOkayButton", "MacroPopupCancelButton" };
-	for i = 1, #Buttons do
-		_G[Buttons[i]]:StripTextures();
-		S:HandleButton(_G[Buttons[i]]);
-	end
+	S:HandleCloseButton(MacroFrameCloseButton, MacroFrame.backdrop)
+
+	MacroButtonScrollFrame:StripTextures()
+	MacroButtonScrollFrame:CreateBackdrop("Transparent")
+
+	S:HandleScrollBar(MacroButtonScrollFrameScrollBar)
+	S:HandleScrollBar(MacroFrameScrollFrameScrollBar)
+
+	MacroFrameSelectedMacroButton:StripTextures()
+	MacroFrameSelectedMacroButton:StyleButton(nil, true)
+	MacroFrameSelectedMacroButton:GetNormalTexture():SetTexture(nil)
+	MacroFrameSelectedMacroButton:SetTemplate()
+
+	MacroFrameSelectedMacroButtonIcon:SetTexCoord(unpack(E.TexCoords))
+	MacroFrameSelectedMacroButtonIcon:SetInside()
+
+	MacroFrameTextBackground:StripTextures()
+	MacroFrameTextBackground:CreateBackdrop()
+	MacroFrameTextBackground.backdrop:Point("TOPLEFT", 1, -3)
+	MacroFrameTextBackground.backdrop:Point("BOTTOMRIGHT", -17, 3)
+
+	S:HandleButton(MacroEditButton)
+	S:HandleButton(MacroDeleteButton)
+	S:HandleButton(MacroExitButton)
+	S:HandleButton(MacroNewButton)
 
 	for i = 1, 2 do
-		local tab = _G["MacroFrameTab" .. i];
-		tab:Height(22);
+		local tab = _G["MacroFrameTab"..i]
+		tab:StripTextures()
+		S:HandleButton(tab)
+
+		tab:Height(22)
+
+		if i == 1 then
+			tab:Point("TOPLEFT", 19, -50)
+			tab:Width(125)
+		elseif i == 2 then
+			tab:Point("LEFT", MacroFrameTab1, "RIGHT", 3, 0)
+			tab:Width(176)
+		end
+
+		tab.SetWidth = E.noop
 	end
-	MacroFrameTab1:Point("TOPLEFT", MacroFrame, "TOPLEFT", 85, -39);
-	MacroFrameTab2:Point("LEFT", MacroFrameTab1, "RIGHT", 4, 0);
-
-	MacroFrame:StripTextures();
-	MacroFrame:CreateBackdrop("Transparent");
-	MacroFrame.backdrop:Point("TOPLEFT", 10, -11);
-	MacroFrame.backdrop:Point("BOTTOMRIGHT", -32, 71);
-
-	MacroFrameTextBackground:StripTextures();
-	MacroFrameTextBackground:CreateBackdrop("Default");
-	MacroFrameTextBackground.backdrop:Point("TOPLEFT", 6, -3);
-	MacroFrameTextBackground.backdrop:Point("BOTTOMRIGHT", -2, 3);
-
-	MacroButtonScrollFrame:CreateBackdrop();
-
-	S:HandleScrollBar(MacroButtonScrollFrame);
-
-	MacroEditButton:ClearAllPoints();
-	MacroEditButton:Point("BOTTOMLEFT", MacroFrameSelectedMacroButton, "BOTTOMRIGHT", 10, 0);
-
-	MacroFrameSelectedMacroButton:StripTextures();
-	MacroFrameSelectedMacroButton:StyleButton(true);
-	MacroFrameSelectedMacroButton:GetNormalTexture():SetTexture(nil);
-	MacroFrameSelectedMacroButton:SetTemplate("Default");
-	MacroFrameSelectedMacroButtonIcon:SetTexCoord(unpack(E.TexCoords));
-	MacroFrameSelectedMacroButtonIcon:SetInside();
 
 	for i = 1, MAX_ACCOUNT_MACROS do
-		local Button = _G["MacroButton"..i];
-		local ButtonIcon = _G["MacroButton"..i.."Icon"];
+		local button = _G["MacroButton"..i]
+		local buttonIcon = _G["MacroButton"..i.."Icon"]
 
-		if Button then
-			Button:StripTextures();
-			Button:StyleButton(nil, true);
+		if button then
+			button:StripTextures()
+			button:SetTemplate(nil, true)
+			button:StyleButton(nil, true)
 
-			Button:SetTemplate("Default", true);
-		end
-
-		if ButtonIcon then
-			ButtonIcon:SetTexCoord(unpack(E.TexCoords));
-			ButtonIcon:SetInside();
+			buttonIcon:SetTexCoord(unpack(E.TexCoords))
+			buttonIcon:SetInside()
 		end
 	end
 
+	MacroButtonScrollFrame:Size(302, 142)
+	MacroButtonScrollFrame:Point("TOPLEFT", 20, -76)
+
+	MacroButtonScrollFrameScrollBar:Point("TOPLEFT", MacroButtonScrollFrame, "TOPRIGHT", 5, -17)
+	MacroButtonScrollFrameScrollBar:Point("BOTTOMLEFT", MacroButtonScrollFrame, "BOTTOMRIGHT", 5, 17)
+
+	MacroButton1:Point("TOPLEFT", 10, -7)
+
+	MacroEditButton:Point("TOPLEFT", MacroFrameSelectedMacroBackground, "TOPLEFT", 60, -28)
+
+	MacroFrameTextBackground:Point("TOPLEFT", 18, -290)
+
+	MacroFrameText:Width(297)
+
+	MacroFrameSelectedMacroBackground:Point("TOPLEFT", 16, -213)
+
+	MacroFrameScrollFrame:Size(300, 81)
+	MacroFrameScrollFrame:Point("TOPLEFT", MacroFrameSelectedMacroBackground, "BOTTOMLEFT", 5, -20)
+
+	MacroFrameScrollFrameScrollBar:Point("TOPLEFT", MacroFrameScrollFrame, "TOPRIGHT", 6, -14)
+	MacroFrameScrollFrameScrollBar:Point("BOTTOMLEFT", MacroFrameScrollFrame, "BOTTOMRIGHT", 6, 14)
+
+	MacroFrameCharLimitText:Point("BOTTOM", -15, 113)
+
+	MacroDeleteButton:Point("BOTTOMLEFT", 19, 84)
+	MacroExitButton:Point("CENTER", MacroFrame, "TOPLEFT", 304, -417)
+	MacroNewButton:Point("CENTER", MacroFrame, "TOPLEFT", 221, -417)
+
+	-- Popup frame
 	S:HandleIconSelectionFrame(MacroPopupFrame, NUM_MACRO_ICONS_SHOWN, "MacroPopupButton", "MacroPopup")
+
+	S:SetBackdropHitRect(MacroPopupFrame)
+	MacroPopupFrame:Point("TOPLEFT", MacroFrame, "TOPRIGHT", -43, 0)
+
+	MacroPopupScrollFrame:SetTemplate("Transparent")
+
+	S:HandleScrollBar(MacroPopupScrollFrameScrollBar)
+
+	local text1, text2 = select(5, MacroPopupFrame:GetRegions())
+	text1:Point("TOPLEFT", 24, -18)
+	text2:Point("TOPLEFT", 24, -60)
+
+	MacroPopupEditBox:Point("TOPLEFT", 61, -35)
+
+	MacroPopupButton1:Point("TOPLEFT", 31, -82)
+
+	MacroPopupScrollFrame:Size(247, 180)
+	MacroPopupScrollFrame:Point("TOPRIGHT", -32, -76)
+
+	MacroPopupScrollFrameScrollBar:Point("TOPLEFT", MacroPopupScrollFrame, "TOPRIGHT", 4, -18)
+	MacroPopupScrollFrameScrollBar:Point("BOTTOMLEFT", MacroPopupScrollFrame, "BOTTOMRIGHT", 4, 18)
+
+	MacroPopupOkayButton:Point("RIGHT", MacroPopupCancelButton, "LEFT", -3, 0)
 end
 
-S:AddCallbackForAddon("Blizzard_MacroUI", "Macro", LoadSkin);
+S:AddCallbackForAddon("Blizzard_MacroUI", "Skin_Blizzard_MacroUI", LoadSkin)

@@ -1,56 +1,56 @@
-local E, L, V, P, G = unpack(select(2, ...));
-local S = E:GetModule("Skins");
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local S = E:GetModule("Skins")
 
-local format = format;
+--Lua functions
+--WoW API / Variables
 
 local function LoadSkin()
-	if(E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.mirrorTimers ~= true) then return; end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.mirrorTimers then return end
 
 	local function MirrorTimer_OnUpdate(frame, elapsed)
-		if(frame.paused) then
-			return;
-		end
+		if frame.paused then return end
 
-		if(frame.timeSinceUpdate >= 0.3) then
-			local minutes = frame.value / 60;
-			local seconds = frame.value % 60;
-			local text = frame.label:GetText();
+		if frame.timeSinceUpdate <= 0 then
+			local text = frame.label:GetText()
 
-			if(frame.value > 0) then
-				frame.TimerText:SetText(format("%s (%d:%02d)", text, minutes, seconds));
+			if frame.value > 0 then
+				frame.TimerText:SetFormattedText("%s (%d:%02d)", text, frame.value / 60, frame.value % 60)
 			else
-				frame.TimerText:SetText(format("%s (0:00)", text));
+				frame.TimerText:SetFormattedText("%s (0:00)", text)
 			end
-			frame.timeSinceUpdate = 0;
+
+			frame.timeSinceUpdate = 0.033
 		else
-			frame.timeSinceUpdate = frame.timeSinceUpdate + elapsed;
+			frame.timeSinceUpdate = frame.timeSinceUpdate - elapsed
 		end
 	end
 
 	for i = 1, MIRRORTIMER_NUMTIMERS do
-		local mirrorTimer = _G["MirrorTimer" .. i];
-		local statusBar = _G["MirrorTimer" .. i .. "StatusBar"];
-		local text = _G["MirrorTimer" .. i .. "Text"];
+		local mirrorTimer = _G["MirrorTimer"..i]
+		local statusBar = _G["MirrorTimer"..i.."StatusBar"]
+		local text = _G["MirrorTimer"..i.."Text"]
 
-		mirrorTimer:StripTextures();
-		mirrorTimer:Size(222, 18);
-		mirrorTimer.label = text;
-		statusBar:SetStatusBarTexture(E["media"].normTex);
-		E:RegisterStatusBar(statusBar);
-		statusBar:CreateBackdrop();
-		statusBar:Size(222, 18);
-		text:Hide();
+		mirrorTimer:StripTextures()
+		mirrorTimer:Size(222, 18)
+		mirrorTimer.label = text
 
-		local TimerText = mirrorTimer:CreateFontString(nil, "OVERLAY");
-		TimerText:FontTemplate();
-		TimerText:Point("CENTER", statusBar, "CENTER", 0, 0);
-		mirrorTimer.TimerText = TimerText;
+		statusBar:CreateBackdrop()
+		statusBar:Size(222, 18)
+		statusBar:SetStatusBarTexture(E.media.normTex)
+		E:RegisterStatusBar(statusBar)
 
-		mirrorTimer.timeSinceUpdate = 0.3;
-		mirrorTimer:HookScript("OnUpdate", MirrorTimer_OnUpdate);
+		text:Hide()
 
-		E:CreateMover(mirrorTimer, "MirrorTimer" .. i .. "Mover", L["MirrorTimer"] .. i, nil, nil, nil, "ALL,SOLO");
+		local timerText = mirrorTimer:CreateFontString(nil, "OVERLAY")
+		timerText:FontTemplate()
+		timerText:Point("CENTER", statusBar)
+		mirrorTimer.TimerText = timerText
+
+		mirrorTimer.timeSinceUpdate = 0
+		mirrorTimer:HookScript("OnUpdate", MirrorTimer_OnUpdate)
+
+		E:CreateMover(mirrorTimer, "MirrorTimer"..i.."Mover", L["MirrorTimer"]..i, nil, nil, nil, "ALL,SOLO")
 	end
 end
 
-S:AddCallback("MirrorTimers", LoadSkin);
+S:AddCallback("Skin_MirrorTimers", LoadSkin)

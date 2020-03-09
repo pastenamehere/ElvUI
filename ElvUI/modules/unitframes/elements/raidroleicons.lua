@@ -1,12 +1,10 @@
 local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
-local UF = E:GetModule("UnitFrames");
+local UF = E:GetModule("UnitFrames")
 
---Cache global variables
 --Lua functions
 local match = string.match
 local select, tonumber = select, tonumber
 --WoW API / Variables
-local CreateFrame = CreateFrame
 local CreateFrame = CreateFrame
 local GetNumRaidMembers = GetNumRaidMembers
 local GetRaidRosterInfo = GetRaidRosterInfo
@@ -15,14 +13,14 @@ local UnitInParty = UnitInParty
 local UnitInRaid = UnitInRaid
 
 local function CheckLeader(unit)
-	if(unit == "player") then
+	if unit == "player" then
 		return IsPartyLeader()
-	elseif(unit ~= "player" and (UnitInParty(unit) or UnitInRaid(unit))) then
+	elseif unit ~= "player" and (UnitInParty(unit) or UnitInRaid(unit)) then
 		local gtype, index = match(unit, "(%D+)(%d+)")
 		index = tonumber(index)
-		if(gtype == "party" and GetNumRaidMembers() == 0) then
+		if gtype == "party" and GetNumRaidMembers() == 0 then
 			return GetPartyLeaderIndex() == index
-		elseif(gtype == "raid" and GetNumRaidMembers() > 0) then
+		elseif gtype == "raid" and GetNumRaidMembers() > 0 then
 			return select(2, GetRaidRosterInfo(index)) == 2
 		end
 	end

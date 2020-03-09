@@ -1,11 +1,15 @@
-local E, L, V, P, G = unpack(select(2, ...))
-local mod = E:GetModule("NamePlates")
+local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local NP = E:GetModule("NamePlates")
 
-function mod:UpdateElement_Elite(frame)
-	if not self.db.units[frame.UnitType].eliteIcon then return end
+--Lua functions
+--WoW API / Variables
+
+function NP:Update_Elite(frame)
+	local db = self.db.units[frame.UnitType].eliteIcon
+	if not db then return end
 
 	local icon = frame.Elite
-	if self.db.units[frame.UnitType].eliteIcon.enable then
+	if db.enable then
 		local elite, boss = frame.EliteIcon:IsShown(), frame.BossIcon:IsShown()
 
 		if boss then
@@ -22,27 +26,27 @@ function mod:UpdateElement_Elite(frame)
 	end
 end
 
-function mod:ConfigureElement_Elite(frame)
-	if not self.db.units[frame.UnitType].eliteIcon then return end
+function NP:Configure_Elite(frame)
+	local db = self.db.units[frame.UnitType].eliteIcon
+	if not db then return end
 
 	local icon = frame.Elite
-	local position = self.db.units[frame.UnitType].eliteIcon.position
 
-	icon:Size(self.db.units[frame.UnitType].eliteIcon.size)
+	icon:Size(db.size)
 	icon:ClearAllPoints()
 
-	if frame.HealthBar:IsShown() then
-		icon:SetParent(frame.HealthBar)
-		icon:Point(position, frame.HealthBar, position, self.db.units[frame.UnitType].eliteIcon.xOffset, self.db.units[frame.UnitType].eliteIcon.yOffset)
+	if frame.Health:IsShown() then
+		icon:SetParent(frame.Health)
+		icon:Point(db.position, frame.Health, db.position, db.xOffset, db.yOffset)
 	else
 		icon:SetParent(frame)
-		icon:Point(position, frame, position, self.db.units[frame.UnitType].eliteIcon.xOffset, self.db.units[frame.UnitType].eliteIcon.yOffset)
+		icon:Point(db.position, frame, db.position, db.xOffset, db.yOffset)
 	end
 end
 
-function mod:ConstructElement_Elite(frame)
-	local icon = frame.HealthBar:CreateTexture(nil, "OVERLAY")
-	icon:SetTexture("Interface\\AddOns\\ElvUI\\media\\textures\\nameplates")
+function NP:Construct_Elite(frame)
+	local icon = frame.Health:CreateTexture(nil, "OVERLAY")
+	icon:SetTexture(E.Media.Textures.Nameplates)
 	icon:Hide()
 
 	return icon

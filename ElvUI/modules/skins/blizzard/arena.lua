@@ -1,24 +1,38 @@
-local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
-local S = E:GetModule("Skins");
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local S = E:GetModule("Skins")
+
+--Lua functions
+--WoW API / Variables
 
 local function LoadSkin()
-	if E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.arena ~= true then return end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.arena then return end
 
 	ArenaFrame:StripTextures()
 
-	ArenaFrameNameHeader:SetPoint("TOPLEFT", 28, -55)
-	ArenaFrameZoneDescription:SetTextColor(1, 1, 1)
-
 	ArenaFrame:CreateBackdrop("Transparent")
 	ArenaFrame.backdrop:Point("TOPLEFT", 11, -12)
-	ArenaFrame.backdrop:Point("BOTTOMRIGHT", -34, 74)
+	ArenaFrame.backdrop:Point("BOTTOMRIGHT", -32, 76)
 
-	S:HandleButton(ArenaFrameCancelButton)
-	S:HandleButton(ArenaFrameJoinButton)
+	S:SetUIPanelWindowInfo(ArenaFrame, "width")
+	S:SetBackdropHitRect(ArenaFrame)
+
+	S:HandleCloseButton(ArenaFrameCloseButton, ArenaFrame.backdrop)
+
 	S:HandleButton(ArenaFrameGroupJoinButton)
-	ArenaFrameGroupJoinButton:SetPoint("RIGHT", ArenaFrameJoinButton, "LEFT", -2, 0)
+	S:HandleButton(ArenaFrameJoinButton)
+	S:HandleButton(ArenaFrameCancelButton)
 
-	S:HandleCloseButton(ArenaFrameCloseButton)
+	ArenaFrameZoneDescription:SetTextColor(1, 1, 1)
+
+	ArenaFrameNameHeader:Point("TOPLEFT", 28, -55)
+
+	ArenaZone1:Point("TOPLEFT", 24, -79)
+
+	ArenaFrameGroupJoinButton:Width(127)
+
+	ArenaFrameCancelButton:Point("CENTER", ArenaFrame, "TOPLEFT", 302, -417)
+	ArenaFrameJoinButton:Point("RIGHT", ArenaFrameCancelButton, "LEFT", -3, 0)
+	ArenaFrameGroupJoinButton:Point("RIGHT", ArenaFrameJoinButton, "LEFT", -3, 0)
 end
 
-S:AddCallback("Arena", LoadSkin)
+S:AddCallback("Skin_Arena", LoadSkin)

@@ -1,10 +1,10 @@
-local E, L, V, P, G = unpack(select(2, ...))
-local mod = E:GetModule("NamePlates")
-local LSM = LibStub("LibSharedMedia-3.0")
+local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local NP = E:GetModule("NamePlates")
 
-local UnitIsTapDenied = UnitIsTapDenied
+--Lua functions
+--WoW API / Variables
 
-function mod:UpdateElement_CutawayHealthFadeOut(frame)
+function NP:UpdateElement_CutawayHealthFadeOut(frame)
 	local cutawayHealth = frame.CutawayHealth
 	cutawayHealth.fading = true
 	E:UIFrameFadeOut(cutawayHealth, self.db.cutawayHealthFadeOutTime, cutawayHealth:GetAlpha(), 0)
@@ -12,12 +12,13 @@ function mod:UpdateElement_CutawayHealthFadeOut(frame)
 end
 
 local function CutawayHealthClosure(frame)
-	return function() mod:UpdateElement_CutawayHealthFadeOut(frame) end
+	NP:UpdateElement_CutawayHealthFadeOut(frame)
 end
 
-function mod:CutawayHealthValueChangeCallback(frame, health)
+function NP:CutawayHealthValueChangeCallback(frame, health, maxHealth)
 	if self.db.cutawayHealth then
-		local oldValue = frame.HealthBar:GetValue()
+		frame.CutawayHealth:SetMinMaxValues(0, maxHealth)
+		local oldValue = frame.Health:GetValue()
 		local change = oldValue - health
 		if change > 0 and not frame.CutawayHealth.isPlaying then
 			local cutawayHealth = frame.CutawayHealth
@@ -27,10 +28,9 @@ function mod:CutawayHealthValueChangeCallback(frame, health)
 			cutawayHealth.fading = false
 			cutawayHealth:SetValue(oldValue)
 			cutawayHealth:SetAlpha(1)
-			if not cutawayHealth.closure then
-				cutawayHealth.closure = CutawayHealthClosure(frame)
-			end
-			E:Delay(self.db.cutawayHealthLength, cutawayHealth.closure)
+
+			E:Delay(self.db.cutawayHealthLength, CutawayHealthClosure, frame)
+
 			cutawayHealth.isPlaying = true
 			cutawayHealth:Show()
 		end
@@ -43,30 +43,19 @@ function mod:CutawayHealthValueChangeCallback(frame, health)
 	end
 end
 
-function mod:CutawayHealthColorChangeCallback(frame, r, g, b)
+function NP:CutawayHealthColorChangeCallback(frame, r, g, b)
 	frame.CutawayHealth:SetStatusBarColor(r * 1.5, g * 1.5, b * 1.5, 1)
 end
 
-function mod:CutawayHealthMaxHealthChangeCallback(frame, maxHealth)
-	frame.CutawayHealth:SetMinMaxValues(0, maxHealth)
-end
-
-function mod:ConfigureElement_CutawayHealth(frame, configuring)
-	local cutawayHealth = frame.CutawayHealth
-	local healthBar = frame.HealthBar
-
-	cutawayHealth:SetAllPoints(healthBar)	
-	cutawayHealth:SetStatusBarTexture(LSM:Fetch("statusbar", self.db.statusbar))
-end
-
-function mod:ConstructElement_CutawayHealth(parent)
-	local healthBar = parent.HealthBar
+function NP:ConstructElement_CutawayHealth(parent)
+	local healthBar = parent.Health
 
 	local cutawayHealth = CreateFrame("StatusBar", "$parentCutawayHealth", healthBar)
-	cutawayHealth:SetStatusBarTexture(LSM:Fetch("background", "ElvUI Blank"))
+	cutawayHealth:SetAllPoints()
+	cutawayHealth:SetStatusBarTexture(E.media.blankTex)
 	cutawayHealth:SetFrameLevel(healthBar:GetFrameLevel() - 1)
 
-	mod:RegisterHealthBarCallbacks(parent, mod.CutawayHealthValueChangeCallback, mod.CutawayHealthColorChangeCallback, mod.CutawayHealthMaxHealthChangeCallback)
+	NP:RegisterHealthBarCallbacks(parent, NP.CutawayHealthValueChangeCallback, NP.CutawayHealthColorChangeCallback)
 
 	return cutawayHealth
 end

@@ -1,82 +1,102 @@
-local E, L, V, P, G = unpack(select(2, ...));
-local S = E:GetModule("Skins");
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local S = E:GetModule("Skins")
+
+--Lua functions
+--WoW API / Variables
 
 local function LoadSkin()
-	if(E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.timemanager ~= true) then return; end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.timemanager then return end
 
-	TimeManagerFrame:Size(190, 240);
-	TimeManagerFrame:StripTextures();
-	TimeManagerFrame:SetTemplate("Transparent");
+	TimeManagerFrame:StripTextures()
+	TimeManagerFrame:SetTemplate("Transparent")
 
-	E:CreateMover(TimeManagerFrame, "TimeManagerFrameMover", TIMEMANAGER_TITLE);
-	TimeManagerFrame.mover:SetFrameLevel(TimeManagerFrame:GetFrameLevel() + 4);
+	E:CreateMover(TimeManagerFrame, "TimeManagerFrameMover", TIMEMANAGER_TITLE)
+	TimeManagerFrame.mover:SetFrameLevel(TimeManagerFrame:GetFrameLevel() + 4)
 
-	select(7, TimeManagerFrame:GetRegions()):Point("TOP", 0, -5);
+	S:HandleCloseButton(TimeManagerCloseButton, TimeManagerFrame)
 
-	TimeManagerCloseButton:Point("TOPRIGHT", 4, 5);
-	S:HandleCloseButton(TimeManagerCloseButton);
+	TimeManagerStopwatchFrameBackground:SetTexture(nil)
 
-	TimeManagerStopwatchFrame:Point("TOPRIGHT", 10, -12);
+	TimeManagerStopwatchCheck:SetTemplate("Default")
+	TimeManagerStopwatchCheck:StyleButton(nil, true)
 
-	TimeManagerStopwatchFrameBackground:SetTexture(nil);
+	TimeManagerStopwatchCheck:GetNormalTexture():SetInside()
+	TimeManagerStopwatchCheck:GetNormalTexture():SetTexCoord(unpack(E.TexCoords))
 
-	TimeManagerStopwatchCheck:SetTemplate("Default");
-	TimeManagerStopwatchCheck:StyleButton(nil, true);
+	S:HandleDropDownBox(TimeManagerAlarmHourDropDown, 80)
+	S:HandleDropDownBox(TimeManagerAlarmMinuteDropDown, 80)
+	S:HandleDropDownBox(TimeManagerAlarmAMPMDropDown, 80)
 
-	TimeManagerStopwatchCheck:GetNormalTexture():SetInside();
-	TimeManagerStopwatchCheck:GetNormalTexture():SetTexCoord(unpack(E.TexCoords));
+	S:HandleEditBox(TimeManagerAlarmMessageEditBox)
 
-	TimeManagerAlarmTimeFrame:Point("TOPLEFT", 12, -65);
+	TimeManagerAlarmEnabledButton:SetNormalTexture(nil)
+	TimeManagerAlarmEnabledButton.SetNormalTexture = E.noop
+	TimeManagerAlarmEnabledButton:SetPushedTexture(nil)
+	TimeManagerAlarmEnabledButton.SetPushedTexture = E.noop
+	S:HandleButton(TimeManagerAlarmEnabledButton)
 
-	S:HandleDropDownBox(TimeManagerAlarmHourDropDown, 80);
-	S:HandleDropDownBox(TimeManagerAlarmMinuteDropDown, 80);
-	S:HandleDropDownBox(TimeManagerAlarmAMPMDropDown, 80);
+	S:HandleCheckBox(TimeManagerMilitaryTimeCheck)
+	S:HandleCheckBox(TimeManagerLocalTimeCheck)
 
-	S:HandleEditBox(TimeManagerAlarmMessageEditBox);
+	TimeManagerFrame:Size(186, 221)
 
-	TimeManagerAlarmEnabledButton:Point("LEFT", 16, -45);
-	TimeManagerAlarmEnabledButton:SetNormalTexture(nil);
-	TimeManagerAlarmEnabledButton.SetNormalTexture = E.noop;
-	TimeManagerAlarmEnabledButton:SetPushedTexture(nil);
-	TimeManagerAlarmEnabledButton.SetPushedTexture = E.noop;
-	S:HandleButton(TimeManagerAlarmEnabledButton);
+	select(7, TimeManagerFrame:GetRegions()):Point("TOP", 0, -5)
 
-	TimeManagerMilitaryTimeCheck:Point("TOPLEFT", 155, -190);
-	S:HandleCheckBox(TimeManagerMilitaryTimeCheck);
-	S:HandleCheckBox(TimeManagerLocalTimeCheck);
+	TimeManagerFrameTicker:Point("CENTER", TimeManagerGlobe, -4, 12)
 
-	StopwatchFrame:CreateBackdrop("Transparent");
-	StopwatchFrame.backdrop:Point("TOPLEFT", 0, -16);
-	StopwatchFrame.backdrop:Point("BOTTOMRIGHT", 0, 2);
+	TimeManagerStopwatchFrame:Point("TOPRIGHT", 9, -13)
 
-	StopwatchFrame:StripTextures();
+	TimeManagerAlarmTimeFrame:Point("TOPLEFT", 8, -56)
 
-	StopwatchTabFrame:StripTextures();
+	TimeManagerAlarmHourDropDown:Point("TOPLEFT", TimeManagerAlarmTimeLabel, "BOTTOMLEFT", -20, -3)
+	TimeManagerAlarmMinuteDropDown:Point("LEFT", TimeManagerAlarmHourDropDown, "RIGHT", -21, 0)
+	TimeManagerAlarmAMPMDropDown:Point("LEFT", TimeManagerAlarmMinuteDropDown, "RIGHT", -21, 0)
 
-	S:HandleCloseButton(StopwatchCloseButton);
+	TimeManagerAlarmMessageEditBox:Width(168)
+	TimeManagerAlarmMessageEditBox:Point("TOPLEFT", TimeManagerAlarmMessageLabel, "BOTTOMLEFT", 1, -7)
 
-	StopwatchPlayPauseButton:CreateBackdrop("Default", true);
-	StopwatchPlayPauseButton:SetSize(12, 12);
-	StopwatchPlayPauseButton:SetNormalTexture("Interface\\AddOns\\ElvUI\\media\\textures\\play");
-	StopwatchPlayPauseButton:SetHighlightTexture("");
-	StopwatchPlayPauseButton.backdrop:SetOutside(StopwatchPlayPauseButton, 2, 2);
-	StopwatchPlayPauseButton:HookScript("OnEnter", S.SetModifiedBackdrop);
-	StopwatchPlayPauseButton:HookScript("OnLeave", S.SetOriginalBackdrop);
-	StopwatchPlayPauseButton:Point("RIGHT", StopwatchResetButton, "LEFT", -4, 0);
-	S:HandleButton(StopwatchResetButton);
-	StopwatchResetButton:SetSize(16,16);
-	StopwatchResetButton:SetNormalTexture("Interface\\AddOns\\ElvUI\\media\\textures\\reset");
-	StopwatchResetButton:Point("BOTTOMRIGHT", StopwatchFrame, "BOTTOMRIGHT", -4, 6);
+	TimeManagerAlarmEnabledButton:Size(170, 22)
+	TimeManagerAlarmEnabledButton:Point("LEFT", 8, -50)
+
+	TimeManagerMilitaryTimeCheck:Point("TOPLEFT", 158, -175)
+
+	-- StopwatchFrame
+	StopwatchFrame:CreateBackdrop("Transparent")
+	StopwatchFrame.backdrop:Point("TOPLEFT", 0, -20)
+	StopwatchFrame.backdrop:Point("BOTTOMRIGHT", 0, 0)
+
+	StopwatchFrame:StripTextures()
+	StopwatchTabFrame:StripTextures()
+
+	S:HandleCloseButton(StopwatchCloseButton)
+
+	S:HandleButton(StopwatchResetButton)
+
+	StopwatchTicker:Point("BOTTOMRIGHT", -49, 0)
+
+	StopwatchResetButton:Size(16)
+	StopwatchResetButton:Point("BOTTOMRIGHT", -4, 4)
+	StopwatchResetButton:SetNormalTexture("Interface\\AddOns\\ElvUI\\media\\textures\\reset")
+
+	StopwatchPlayPauseButton:Size(12)
+	StopwatchPlayPauseButton:Point("RIGHT", StopwatchResetButton, "LEFT", -5, 0)
+	StopwatchPlayPauseButton:CreateBackdrop("Default", true)
+	StopwatchPlayPauseButton.backdrop:SetOutside(StopwatchPlayPauseButton, 2, 2)
+	StopwatchPlayPauseButton:SetNormalTexture("Interface\\AddOns\\ElvUI\\media\\textures\\play")
+	StopwatchPlayPauseButton:SetHighlightTexture("")
+	StopwatchPlayPauseButton:HookScript("OnEnter", S.SetModifiedBackdrop)
+	StopwatchPlayPauseButton:HookScript("OnLeave", S.SetOriginalBackdrop)
 
 	local function SetPlayTexture()
-		StopwatchPlayPauseButton:SetNormalTexture("Interface\\AddOns\\ElvUI\\media\\textures\\play");
+		StopwatchPlayPauseButton:SetNormalTexture("Interface\\AddOns\\ElvUI\\media\\textures\\play")
 	end
 	local function SetPauseTexture()
-		StopwatchPlayPauseButton:SetNormalTexture("Interface\\AddOns\\ElvUI\\media\\textures\\pause");
+		StopwatchPlayPauseButton:SetNormalTexture("Interface\\AddOns\\ElvUI\\media\\textures\\pause")
 	end
-	hooksecurefunc("Stopwatch_Play", SetPauseTexture);
-	hooksecurefunc("Stopwatch_Pause", SetPlayTexture);
-	hooksecurefunc("Stopwatch_Clear", SetPlayTexture);
+
+	hooksecurefunc("Stopwatch_Play", SetPauseTexture)
+	hooksecurefunc("Stopwatch_Pause", SetPlayTexture)
+	hooksecurefunc("Stopwatch_Clear", SetPlayTexture)
 end
 
-S:AddCallbackForAddon("Blizzard_TimeManager", "TimeManager", LoadSkin);
+S:AddCallbackForAddon("Blizzard_TimeManager", "Skin_Blizzard_TimeManager", LoadSkin)

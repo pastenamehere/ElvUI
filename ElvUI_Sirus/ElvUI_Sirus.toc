@@ -1,0 +1,18 @@
+﻿## Interface: 30300
+## Author: Bunny
+## Version: 1.14
+## Title: |cff1784d1E|r|cffe5e3e3lvUI|r |cff1784d1S|r|cffe5e3e3irus|r
+## Notes: User Interface replacement AddOn for World of Warcraft.
+## SavedVariables: ElvSirusDB
+## RequiredDeps: ElvUI
+## OptionalDeps: ElvUI_Enhanced, ElvUI_VisualProcs
+
+Libraries\LibDualSpec-1.0\LibDualSpec-1.0.lua
+Init.lua
+Fonts.lua
+Tags.lua
+Case.lua
+OptionsUI.lua
+Settings\Load_Config.xml
+Modules\Load_Modules.xml
+Plugins\Load_Plugins.xml

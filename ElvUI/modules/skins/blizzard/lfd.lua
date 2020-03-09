@@ -1,23 +1,173 @@
-local E, L, V, P, G = unpack(select(2, ...)); --Inport: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
-local S = E:GetModule("Skins");
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local S = E:GetModule("Skins")
 
---Cache global variables
 --Lua functions
 local _G = _G
-local select, unpack = select, unpack
+local unpack = unpack
 local find = string.find
 --WoW API / Variables
+local GetItemInfo = GetItemInfo
+local GetItemQualityColor = GetItemQualityColor
 local GetLFGDungeonRewardLink = GetLFGDungeonRewardLink
 local GetLFGDungeonRewards = GetLFGDungeonRewards
-local GetItemInfo = GetItemInfo
+local hooksecurefunc = hooksecurefunc
 
 local function LoadSkin()
-	if E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.lfd ~= true then return end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.lfd then return end
 
+	LFDQueueFrame:StripTextures(true)
+	LFDQueueFrame:CreateBackdrop("Transparent")
+	LFDQueueFrame.backdrop:Point("TOPLEFT", 11, -12)
+	LFDQueueFrame.backdrop:Point("BOTTOMRIGHT", -3, 4)
+
+	S:HookScript(LFDParentFrame, "OnShow", function(self)
+		S:SetUIPanelWindowInfo(self, "width", 341)
+		S:SetBackdropHitRect(self, LFDQueueFrame.backdrop)
+		S:Unhook(self, "OnShow")
+	end)
+
+	S:HandleCloseButton((LFDParentFrame:GetChildren()), LFDQueueFrame.backdrop)
+
+	LFDParentFramePortrait:Kill()
+
+	S:HandleCheckBox(LFDQueueFrameRoleButtonTank.checkButton)
+	LFDQueueFrameRoleButtonTank.checkButton:SetFrameLevel(LFDQueueFrameRoleButtonTank.checkButton:GetFrameLevel() + 2)
+	S:HandleCheckBox(LFDQueueFrameRoleButtonHealer.checkButton)
+	LFDQueueFrameRoleButtonHealer.checkButton:SetFrameLevel(LFDQueueFrameRoleButtonHealer.checkButton:GetFrameLevel() + 2)
+	S:HandleCheckBox(LFDQueueFrameRoleButtonDPS.checkButton)
+	LFDQueueFrameRoleButtonDPS.checkButton:SetFrameLevel(LFDQueueFrameRoleButtonDPS.checkButton:GetFrameLevel() + 2)
+	S:HandleCheckBox(LFDQueueFrameRoleButtonLeader.checkButton)
+	LFDQueueFrameRoleButtonLeader.checkButton:SetFrameLevel(LFDQueueFrameRoleButtonLeader.checkButton:GetFrameLevel() + 2)
+
+	S:HandleDropDownBox(LFDQueueFrameTypeDropDown)
+	LFDQueueFrameTypeDropDown:HookScript("OnShow", function(self) self:Width(200) end)
+
+	for i = 1, NUM_LFD_CHOICE_BUTTONS do
+		local button = _G["LFDQueueFrameSpecificListButton"..i]
+		button.enableButton:StripTextures()
+		button.enableButton:CreateBackdrop("Default")
+		button.enableButton.backdrop:SetInside(nil, 4, 4)
+
+		button.expandOrCollapseButton:SetNormalTexture(E.Media.Textures.Plus)
+		button.expandOrCollapseButton.SetNormalTexture = E.noop
+		button.expandOrCollapseButton:GetNormalTexture():Size(16)
+
+		button.expandOrCollapseButton:SetHighlightTexture(nil)
+
+		hooksecurefunc(button.expandOrCollapseButton, "SetNormalTexture", function(self, texture)
+			if find(texture, "MinusButton") then
+				self:GetNormalTexture():SetTexture(E.Media.Textures.Minus)
+			elseif find(texture, "PlusButton") then
+				self:GetNormalTexture():SetTexture(E.Media.Textures.Plus)
+			end
+		end)
+	end
+
+	LFDQueueFrameSpecificListScrollFrame:StripTextures()
+	S:HandleScrollBar(LFDQueueFrameRandomScrollFrameScrollBar)
+	S:HandleScrollBar(LFDQueueFrameSpecificListScrollFrameScrollBar)
+
+	S:HandleButton(LFDQueueFrameFindGroupButton)
+	S:HandleButton(LFDQueueFrameCancelButton)
+
+	S:HandleButton(LFDQueueFramePartyBackfillBackfillButton)
+	S:HandleButton(LFDQueueFramePartyBackfillNoBackfillButton)
+
+	S:HandleButton(LFDQueueFrameNoLFDWhileLFRLeaveQueueButton)
+
+	LFDQueueFrameFindGroupButton:Point("BOTTOMLEFT", 19, 12)
+	LFDQueueFrameCancelButton:Point("BOTTOMRIGHT", -11, 12)
+
+	LFDQueueFrameTypeDropDown:Point("TOPLEFT", 152, -119)
+
+	LFDQueueFrameSpecificListButton1:Point("TOPLEFT", 25, -154)
+	LFDQueueFrameRandomScrollFrame:Point("BOTTOMRIGHT", -34, 41)
+
+	LFDQueueFrameCooldownFrame:Size(325, 259)
+	LFDQueueFrameCooldownFrame:Point("BOTTOMRIGHT", LFDQueueFrame, "BOTTOMRIGHT", -11, 37)
+
+	LFDQueueFrameCooldownFrame:HookScript("OnShow", function(self)
+		self:SetFrameLevel(self:GetParent():GetFrameLevel() + 5)
+	end)
+
+	local function skinLFDRandomDungeonLoot(frame)
+		if frame.isSkinned then return end
+
+		local icon = _G[frame:GetName().."IconTexture"]
+		local nameFrame = _G[frame:GetName().."NameFrame"]
+		local count = _G[frame:GetName().."Count"]
+
+		frame:StripTextures()
+		frame:CreateBackdrop("Transparent")
+		frame.backdrop:SetOutside(icon)
+
+		icon:SetTexCoord(unpack(E.TexCoords))
+		icon:SetDrawLayer("BORDER")
+		icon:SetParent(frame.backdrop)
+
+		nameFrame:SetSize(118, 39)
+
+		count:SetParent(frame.backdrop)
+
+		frame.isSkinned = true
+	end
+
+	local function getLFGDungeonRewardLinkFix(dungeonID, rewardIndex)
+		local _, link = GetLFGDungeonRewardLink(dungeonID, rewardIndex)
+
+		if not link then
+			E.ScanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+			E.ScanTooltip:SetLFGDungeonReward(dungeonID, rewardIndex)
+			_, link = E.ScanTooltip:GetItem()
+			E.ScanTooltip:Hide()
+		end
+
+		return link
+	end
+
+	hooksecurefunc("LFDQueueFrameRandom_UpdateFrame", function()
+		local dungeonID = LFDQueueFrame.type
+		if not dungeonID then return end
+
+		local _, _, _, _, _, numRewards = GetLFGDungeonRewards(dungeonID)
+		for i = 1, numRewards do
+			local frame = _G["LFDQueueFrameRandomScrollFrameChildFrameItem"..i]
+			local name = _G["LFDQueueFrameRandomScrollFrameChildFrameItem"..i.."Name"]
+
+			skinLFDRandomDungeonLoot(frame)
+
+			local link = getLFGDungeonRewardLinkFix(dungeonID, i)
+			if link then
+				local _, _, quality = GetItemInfo(link)
+				if quality then
+					local r, g, b = GetItemQualityColor(quality)
+					frame.backdrop:SetBackdropBorderColor(r, g, b)
+					name:SetTextColor(r, g, b)
+				end
+			else
+				frame.backdrop:SetBackdropBorderColor(unpack(E.media.bordercolor))
+				name:SetTextColor(1, 1, 1)
+			end
+		end
+	end)
+
+	-- LFDDungeonReadyStatus
 	LFDDungeonReadyStatus:SetTemplate("Transparent")
-
 	S:HandleCloseButton(LFDDungeonReadyStatusCloseButton, nil, "-")
 
+	LFDSearchStatus:SetTemplate("Transparent")
+
+	-- LFDRoleCheckPopup
+	LFDRoleCheckPopup:SetTemplate("Transparent")
+
+	S:HandleCheckBox(LFDRoleCheckPopupRoleButtonTank.checkButton)
+	S:HandleCheckBox(LFDRoleCheckPopupRoleButtonHealer.checkButton)
+	S:HandleCheckBox(LFDRoleCheckPopupRoleButtonDPS.checkButton)
+
+	S:HandleButton(LFDRoleCheckPopupAcceptButton)
+	S:HandleButton(LFDRoleCheckPopupDeclineButton)
+
+	-- LFDDungeonReadyDialog
 	LFDDungeonReadyDialog:SetTemplate("Transparent")
 
 	LFDDungeonReadyDialog.label:Size(280, 0)
@@ -39,12 +189,9 @@ local function LoadSkin()
 	S:HandleButton(LFDDungeonReadyDialogEnterDungeonButton)
 	LFDDungeonReadyDialogLeaveQueueButton:Point("BOTTOMLEFT", LFDDungeonReadyDialog, "BOTTOM", 7, 10)
 	S:HandleButton(LFDDungeonReadyDialogLeaveQueueButton)
-    
-    LFDParentFrameArt:StripTextures(true)
-	LFDParentFrameArt:CreateBackdrop("Transparent")
 
-	--[[LFDDungeonReadyDialogRoleIcon:Size(57)
-	LFDDungeonReadyDialogRoleIcon:ClearAllPoints()
+--[[
+	LFDDungeonReadyDialogRoleIcon:Size(57)
 	LFDDungeonReadyDialogRoleIcon:Point("BOTTOM", 1, 54)
 	LFDDungeonReadyDialogRoleIcon:SetTemplate("Default")
 	LFDDungeonReadyDialogRoleIconTexture:SetInside()
@@ -60,24 +207,10 @@ local function LoadSkin()
 			return 0.32421875, 0.453125, 0.31640625, 0.4453125
 		end
 	end
-	GameTooltip:SetLFGDungeonReward(287, 1)]]
+	GameTooltip:SetLFGDungeonReward(287, 1)
+--]]
 
-	local scan
-	local function GetLFGDungeonRewardLinkFix(dungeonID, rewardIndex)
-		local _, link = GetLFGDungeonRewardLink(dungeonID, rewardIndex)
-		if not link then
-			if not scan then
-				scan = CreateFrame("GameTooltip", "DungeonRewardLinkScan", nil, "GameTooltipTemplate")
-				scan:SetOwner(UIParent, "ANCHOR_NONE")
-			end
-			scan:ClearLines()
-			scan:SetLFGDungeonReward(dungeonID, rewardIndex)
-			_, link = scan:GetItem()
-		end
-		return link
-	end
-
-	local function SkinLFDDungeonReadyDialogReward(button)
+	local function skinLFDDungeonReadyDialogReward(button)
 		if button.isSkinned then return end
 
 		button:Size(28)
@@ -85,25 +218,26 @@ local function LoadSkin()
 		button.texture:SetInside()
 		button.texture:SetTexCoord(unpack(E.TexCoords))
 		button:DisableDrawLayer("OVERLAY")
+
 		button.isSkinned = true
 	end
 
 	hooksecurefunc("LFDDungeonReadyDialogReward_SetMisc", function(button)
-		SkinLFDDungeonReadyDialogReward(button)
+		skinLFDDungeonReadyDialogReward(button)
 
 		SetPortraitToTexture(button.texture, "")
 		button.texture:SetTexture("Interface\\Icons\\inv_misc_coin_02")
 	end)
 
 	hooksecurefunc("LFDDungeonReadyDialogReward_SetReward", function(button, dungeonID, rewardIndex)
-		SkinLFDDungeonReadyDialogReward(button)
+		skinLFDDungeonReadyDialogReward(button)
 
-		local link = GetLFGDungeonRewardLinkFix(dungeonID, rewardIndex)
+		local link = getLFGDungeonRewardLinkFix(dungeonID, rewardIndex)
 		if link then
 			local _, _, quality = GetItemInfo(link)
 			button:SetBackdropBorderColor(GetItemQualityColor(quality))
 		else
-			button:SetBackdropBorderColor(unpack(E["media"].bordercolor))
+			button:SetBackdropBorderColor(unpack(E.media.bordercolor))
 		end
 
 		local texturePath = button.texture:GetTexture()
@@ -112,127 +246,6 @@ local function LoadSkin()
 			button.texture:SetTexture(texturePath)
 		end
 	end)
-
-	LFDRoleCheckPopup:SetTemplate("Transparent")
-
-	S:HandleCheckBox(LFDRoleCheckPopupRoleButtonTank.checkButton)
-	S:HandleCheckBox(LFDRoleCheckPopupRoleButtonHealer.checkButton)
-	S:HandleCheckBox(LFDRoleCheckPopupRoleButtonDPS.checkButton)
-
-	S:HandleButton(LFDRoleCheckPopupAcceptButton)
-	S:HandleButton(LFDRoleCheckPopupDeclineButton)
-
-	LFDSearchStatus:SetTemplate("Transparent")
-
-	LFDQueueFrame:StripTextures(true)
-
-	-- LFDParentFramePortrait:Kill()
-
-	for i = 1, LFDParentFrame:GetNumChildren() do
-		local child = select(i, LFDParentFrame:GetChildren())
-		if child.GetPushedTexture and child:GetPushedTexture() and not child:GetName() then
-			S:HandleCloseButton(child)
-		end
-	end
-
-	S:HandleCheckBox(LFDQueueFrameRoleButtonTank.checkButton)
-	LFDQueueFrameRoleButtonTank.checkButton:SetFrameLevel(LFDQueueFrameRoleButtonTank.checkButton:GetFrameLevel() + 2)
-	S:HandleCheckBox(LFDQueueFrameRoleButtonHealer.checkButton)
-	LFDQueueFrameRoleButtonHealer.checkButton:SetFrameLevel(LFDQueueFrameRoleButtonHealer.checkButton:GetFrameLevel() + 2)
-	S:HandleCheckBox(LFDQueueFrameRoleButtonDPS.checkButton)
-	LFDQueueFrameRoleButtonDPS.checkButton:SetFrameLevel(LFDQueueFrameRoleButtonDPS.checkButton:GetFrameLevel() + 2)
-	S:HandleCheckBox(LFDQueueFrameRoleButtonLeader.checkButton)
-	LFDQueueFrameRoleButtonLeader.checkButton:SetFrameLevel(LFDQueueFrameRoleButtonLeader.checkButton:GetFrameLevel() + 2)
-
-	S:HandleDropDownBox(LFDQueueFrameTypeDropDown)
-	LFDQueueFrameTypeDropDown:HookScript("OnShow", function(self) self:Width(230) end)
-	LFDQueueFrameTypeDropDown:Point("TOPLEFT", 101, -125)
-
-	local function SkinLFDRandomDungeonLoot(frame)
-		if frame.isSkinned then return end
-
-		local icon = _G[frame:GetName().."IconTexture"]
-		local nameFrame = _G[frame:GetName().."NameFrame"]
-		local count = _G[frame:GetName().."Count"]
-
-		frame:StripTextures()
-		frame:CreateBackdrop("Transparent")
-		frame.backdrop:SetOutside(icon)
-
-		icon:SetTexCoord(unpack(E.TexCoords))
-		icon:SetDrawLayer("BORDER")
-		icon:SetParent(frame.backdrop)
-
-		nameFrame:SetSize(118, 39)
-
-		count:SetParent(frame.backdrop)
-		frame.isSkinned = true
-	end
-
-	hooksecurefunc("LFDQueueFrameRandom_UpdateFrame", function()
-		local dungeonID = LFDQueueFrame.type
-		if not dungeonID then return end
-
-		local _, _, _, _, _, numRewards = GetLFGDungeonRewards(dungeonID)
-		for i = 1, numRewards do
-			local frame = _G["LFDQueueFrameRandomScrollFrameChildFrameItem"..i]
-			local name = _G["LFDQueueFrameRandomScrollFrameChildFrameItem"..i.."Name"]
-			SkinLFDRandomDungeonLoot(frame)
-
-			local link = GetLFGDungeonRewardLinkFix(dungeonID, i)
-			if link then
-				local _, _, quality = GetItemInfo(link)
-				if quality then
-					frame.backdrop:SetBackdropBorderColor(GetItemQualityColor(quality))
-					name:SetTextColor(GetItemQualityColor(quality))
-				end
-			else
-				frame.backdrop:SetBackdropBorderColor(unpack(E["media"].bordercolor))
-				name:SetTextColor(1, 1, 1)
-			end
-		end
-	end)
-
-	for i = 1, NUM_LFD_CHOICE_BUTTONS do
-		local button = _G["LFDQueueFrameSpecificListButton" .. i]
-		button.enableButton:StripTextures()
-		button.enableButton:CreateBackdrop("Default")
-		button.enableButton.backdrop:SetInside(nil, 4, 4)
-
-		button.expandOrCollapseButton:SetNormalTexture("Interface\\AddOns\\ElvUI\\media\\textures\\PlusMinusButton")
-		button.expandOrCollapseButton.SetNormalTexture = E.noop
-		button.expandOrCollapseButton:GetNormalTexture():Size(12)
-
-		button.expandOrCollapseButton:SetHighlightTexture(nil)
-
-		hooksecurefunc(button.expandOrCollapseButton, "SetNormalTexture", function(self, texture)
-			if find(texture, "MinusButton") then
-				self:GetNormalTexture():SetTexCoord(0.545, 0.975, 0.085, 0.925)
-			elseif find(texture, "PlusButton") then
-				self:GetNormalTexture():SetTexCoord(0.045, 0.475, 0.085, 0.925)
-			end
-		end)
-	end
-
-	LFDQueueFrameSpecificListScrollFrame:StripTextures()
-	S:HandleScrollBar(LFDQueueFrameSpecificListScrollFrameScrollBar)
-
-	S:HandleButton(LFDQueueFrameFindGroupButton)
-
-	hooksecurefunc("LFDQueueFrameRandomCooldownFrame_Update", function()
-		if LFDQueueFrameCooldownFrame:IsShown() then
-			LFDQueueFrameCooldownFrame:SetFrameLevel(LFDQueueFrameCooldownFrame:GetParent():GetFrameLevel() + 5)
-		end
-	end)
-
-	S:HandleButton(LFDQueueFramePartyBackfillBackfillButton)
-	S:HandleButton(LFDQueueFramePartyBackfillNoBackfillButton)
-
-	S:HandleButton(LFDQueueFrameNoLFDWhileLFRLeaveQueueButton)
-    
-    for i = 1, 2 do
-		S:HandleTab(_G["LFDParentFrameTab"..i])
-	end
 end
 
-S:AddCallback("LFD", LoadSkin)
+S:AddCallback("Skin_LFD", LoadSkin)

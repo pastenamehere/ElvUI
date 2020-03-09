@@ -1,20 +1,20 @@
-local E, L, V, P, G = unpack(select(2, ...))
+local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
 local mod = E:GetModule("DataBars")
 local LSM = LibStub("LibSharedMedia-3.0")
 
---Cache global variables
 --Lua functions
 local _G = _G
-local format = format
-
+local format = string.format
 --WoW API / Variables
-local GetWatchedFactionInfo, GetNumFactions, GetFactionInfo = GetWatchedFactionInfo, GetNumFactions, GetFactionInfo
+local GetFactionInfo = GetFactionInfo
+local GetNumFactions = GetNumFactions
+local GetWatchedFactionInfo = GetWatchedFactionInfo
 local InCombatLockdown = InCombatLockdown
 local FACTION_BAR_COLORS = FACTION_BAR_COLORS
-local REPUTATION, STANDING = REPUTATION, STANDING
+local REPUTATION = REPUTATION
+local STANDING = STANDING
+local UNKNOWN = UNKNOWN
 
-local backupColor = FACTION_BAR_COLORS[1]
-local FactionStandingLabelUnknown = UNKNOWN
 function mod:UpdateReputation(event)
 	if not mod.db.reputation.enable then return end
 
@@ -22,7 +22,7 @@ function mod:UpdateReputation(event)
 
 	local ID, standingLabel
 	local name, reaction, min, max, value = GetWatchedFactionInfo()
-	local numFactions = GetNumFactions();
+	local numFactions = GetNumFactions()
 
 	if not name or (event == "PLAYER_REGEN_DISABLED" and self.db.reputation.hideInCombat) then
 		bar:Hide()
@@ -37,7 +37,7 @@ function mod:UpdateReputation(event)
 
 		local text = ""
 		local textFormat = self.db.reputation.textFormat
-		local color = FACTION_BAR_COLORS[reaction] or backupColor
+		local color = FACTION_BAR_COLORS[reaction] or FACTION_BAR_COLORS[1]
 		bar.statusBar:SetStatusBarColor(color.r, color.g, color.b)
 
 		bar.statusBar:SetMinMaxValues(min, max)
@@ -46,19 +46,19 @@ function mod:UpdateReputation(event)
 		for i = 1, numFactions do
 			local factionName, _, standingID = GetFactionInfo(i)
 			if factionName == name then
-				ID = standingID;
+				ID = standingID
 			end
 		end
 
 		if ID then
 			standingLabel = _G["FACTION_STANDING_LABEL"..ID]
 		else
-			standingLabel = FactionStandingLabelUnknown
+			standingLabel = UNKNOWN
 		end
 
 		--Prevent a division by zero
 		local maxMinDiff = max - min
-		if (maxMinDiff == 0) then
+		if maxMinDiff == 0 then
 			maxMinDiff = 1
 		end
 
@@ -94,14 +94,14 @@ function mod:ReputationBar_OnEnter()
 		GameTooltip:AddLine(name)
 		GameTooltip:AddLine(" ")
 
-		GameTooltip:AddDoubleLine(STANDING..":", _G["FACTION_STANDING_LABEL" .. reaction], 1, 1, 1)
+		GameTooltip:AddDoubleLine(STANDING..":", _G["FACTION_STANDING_LABEL"..reaction], 1, 1, 1)
 		GameTooltip:AddDoubleLine(REPUTATION..":", format("%d / %d (%d%%)", value - min, max - min, (value - min) / ((max - min == 0) and max or (max - min)) * 100), 1, 1, 1)
 	end
 	GameTooltip:Show()
 end
 
 function mod:ReputationBar_OnClick()
-	ToggleCharacter("ReputationFrame");
+	ToggleCharacter("ReputationFrame")
 end
 
 function mod:UpdateReputationDimensions()
@@ -140,6 +140,6 @@ function mod:LoadReputationBar()
 
 	self:UpdateReputationDimensions()
 
-	E:CreateMover(self.repBar, "ReputationBarMover", L["Reputation Bar"])
+	E:CreateMover(self.repBar, "ReputationBarMover", L["Reputation Bar"], nil, nil, nil, nil, nil, "databars,reputation")
 	self:EnableDisable_ReputationBar()
 end

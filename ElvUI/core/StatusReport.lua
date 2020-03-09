@@ -1,7 +1,8 @@
-local E, L, V, P, G = unpack(select(2, ...))
+local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local Skins = E:GetModule("Skins")
 
-local max = math.max
-
+--Lua functions
+--WoW API / Variables
 local CreateFrame = CreateFrame
 local GetAddOnInfo = GetAddOnInfo
 local GetCurrentResolution = GetCurrentResolution
@@ -10,28 +11,17 @@ local GetLocale = GetLocale
 local GetNumAddOns = GetNumAddOns
 local GetRealZoneText = GetRealZoneText
 local GetScreenResolutions = GetScreenResolutions
-local UnitLevel = UnitLevel
-
-local function IsAddOnEnabled(addon)
-	return GetAddOnEnableState(E.myname, addon) == 2
-end
 
 local function AreOtherAddOnsEnabled()
 	local name, loadable, reason, _
 	for i = 1, GetNumAddOns() do
 		name, _, _, loadable, reason = GetAddOnInfo(i)
-		if ((name ~= "ElvUI" and name ~= "ElvUI Config") and (loadable or (not loadable and reason == "DEMAND_LOADED"))) then --Loaded or load on demand
-			return "No"
+		if (name ~= "ElvUI" and name ~= "ElvUI_OptionsUI") and (loadable or (not loadable and reason == "DEMAND_LOADED")) then --Loaded or load on demand
+			return "Yes"
 		end
 	end
-	return "Yes"
-end
 
-local function GetUiScale()
-	local uiScale = GetCVar("uiScale")
-	local minUiScale = E.global.general.minUiScale
-
-	return max(uiScale, minUiScale)
+	return "No"
 end
 
 local function GetDisplayMode()
@@ -64,11 +54,65 @@ local EnglishClassName = {
 	["WARRIOR"] = "Warrior",
 }
 
-local function GetSpecName()
-	local _, specName = E:GetTalentSpecInfo()
+local EnglishSpecName = {
+	DEATHKNIGHT = {
+		"Blood",
+		"Frost",
+		"Unholy"
+	},
+	DRUID = {
+		"Balance",
+		"Feral",
+		"Guardian",
+		"Restoration"
+	},
+	HUNTER = {
+		"Beast Mastery",
+		"Marksmanship",
+		"Survival"
+	},
+	MAGE = {
+		"Arcane",
+		"Fire",
+		"Frost"
+	},
+	PALADIN = {
+		"Holy",
+		"Protection",
+		"Retribution"
+	},
+	PRIEST = {
+		"Discipline",
+		"Holy",
+		"Shadow"
+	},
+	ROGUE = {
+		"Assasination",
+		"Combat",
+		"Sublety"
+	},
+	SHAMAN = {
+		"Elemental",
+		"Enhancement",
+		"Restoration"
+	},
+	WARLOCK = {
+		"Affliction",
+		"Demonoligy",
+		"Destruction"
+	},
+	WARRIOR = {
+		"Arms",
+		"Fury",
+		"Protection"
+	}
+}
 
-	if specName and specName ~= "" then
-		return specName
+local function GetSpecName()
+	local specIdx, specName = E:GetTalentSpecInfo()
+
+	if (specIdx and specIdx ~= 0) and (specName and specName ~= "") then
+		return EnglishSpecName[E.myclass][specIdx]
 	else
 		return "None"
 	end
@@ -88,13 +132,13 @@ function E:CreateStatusFrame()
 		section.Header:Size(300, 30)
 		section.Header:Point("TOP", section)
 
-		section.Header.Text = section.Header:CreateFontString(nil, "ARTWORK", "SystemFont_Shadow_Large")
+		section.Header.Text = section.Header:CreateFontString(nil, "ARTWORK", "NumberFont_Outline_Large")
 		section.Header.Text:Point("TOP")
 		section.Header.Text:Point("BOTTOM")
 		section.Header.Text:SetJustifyH("CENTER")
 		section.Header.Text:SetJustifyV("MIDDLE")
-		local font, height, flags = section.Header.Text:GetFont()
-		section.Header.Text:SetFont(font, height*1.3, flags)
+		local font, fontHeight, flags = section.Header.Text:GetFont()
+		section.Header.Text:SetFont(font, fontHeight*1.3, flags)
 
 		section.Header.LeftDivider = section.Header:CreateTexture(nil, "ARTWORK")
 		section.Header.LeftDivider:Height(8)
@@ -115,12 +159,12 @@ function E:CreateStatusFrame()
 
 	local function CreateContentLines(num, parent, anchorTo)
 		local content = CreateFrame("Frame", nil, parent)
-		content:Size(240, (num * 20) + ((num-1)*5)) --20 height and 5 spacing
-		content:Point("TOP", anchorTo, "BOTTOM",0 , -5)
+		content:Size(240, (num * 20) + ((num - 1) * 5)) --20 height and 5 spacing
+		content:Point("TOP", anchorTo, "BOTTOM", 0, -5)
 		for i = 1, num do
 			local line = CreateFrame("Frame", nil, content)
 			line:Size(240, 20)
-			line.Text = line:CreateFontString(nil, "ARTWORK", "SystemFont_Shadow_Large")
+			line.Text = line:CreateFontString(nil, "ARTWORK", "NumberFont_Outline_Large")
 			line.Text:SetAllPoints()
 			line.Text:SetJustifyH("LEFT")
 			line.Text:SetJustifyV("MIDDLE")
@@ -129,7 +173,7 @@ function E:CreateStatusFrame()
 			if i == 1 then
 				content["Line"..i]:Point("TOP", content, "TOP")
 			else
-				content["Line"..i]:Point("TOP", content["Line"..(i-1)], "BOTTOM", 0, -5)
+				content["Line"..i]:Point("TOP", content["Line"..(i - 1)], "BOTTOM", 0, -5)
 			end
 		end
 
@@ -151,7 +195,7 @@ function E:CreateStatusFrame()
 	StatusFrame:SetScript("OnDragStart", function(self)
 		self:StartMoving()
 	end)
-	StatusFrame:SetScript("OnDragStop", function(self) 
+	StatusFrame:SetScript("OnDragStop", function(self)
 		self:StopMovingOrSizing()
 	end)
 
@@ -160,7 +204,7 @@ function E:CreateStatusFrame()
 	StatusFrame.TitleLogoFrame:Size(128, 64)
 	StatusFrame.TitleLogoFrame:Point("CENTER", StatusFrame, "TOP", 0, 0)
 	StatusFrame.TitleLogoFrame.Texture = StatusFrame.TitleLogoFrame:CreateTexture(nil, "ARTWORK")
-	StatusFrame.TitleLogoFrame.Texture:SetTexture("Interface\\AddOns\\ElvUI\\media\\textures\\logo.tga")
+	StatusFrame.TitleLogoFrame.Texture:SetTexture(E.Media.Textures.Logo)
 	StatusFrame.TitleLogoFrame.Texture:SetAllPoints()
 
 	--Sections
@@ -186,8 +230,8 @@ function E:CreateStatusFrame()
 	--Content lines
 	StatusFrame.Section1.Content.Line1.Text:SetFormattedText("Version of ElvUI: |cff4beb2c%s|r", E.version)
 	StatusFrame.Section1.Content.Line2.Text:SetFormattedText("Other AddOns Enabled: |cff4beb2c%s|r", AreOtherAddOnsEnabled())
-	StatusFrame.Section1.Content.Line3.Text:SetFormattedText("Auto Scale Enabled: |cff4beb2c%s|r", (E.global.general.autoScale == true and "Yes" or "No"))
-	StatusFrame.Section1.Content.Line4.Text:SetFormattedText("UI Scale Is: |cff4beb2c%.4f|r", GetUiScale())
+	StatusFrame.Section1.Content.Line3.Text:SetFormattedText("Recommended Scale: |cff4beb2c%s|r", E:PixelBestSize())
+	StatusFrame.Section1.Content.Line4.Text:SetFormattedText("UI Scale Is: |cff4beb2c%s|r", E.global.general.UIScale)
 
 	StatusFrame.Section2.Content.Line1.Text:SetFormattedText("Version of WoW: |cff4beb2c%s (build %s)|r", E.wowpatch, E.wowbuild)
 	StatusFrame.Section2.Content.Line2.Text:SetFormattedText("Client Language: |cff4beb2c%s|r", GetLocale())
@@ -199,7 +243,7 @@ function E:CreateStatusFrame()
 	StatusFrame.Section3.Content.Line2.Text:SetFormattedText("Race: |cff4beb2c%s|r", E.myrace)
 	StatusFrame.Section3.Content.Line3.Text:SetFormattedText("Class: |cff4beb2c%s|r", EnglishClassName[E.myclass])
 	StatusFrame.Section3.Content.Line4.Text:SetFormattedText("Specialization: |cff4beb2c%s|r", GetSpecName())
-	StatusFrame.Section3.Content.Line5.Text:SetFormattedText("Level: |cff4beb2c%s|r", UnitLevel("player"))
+	StatusFrame.Section3.Content.Line5.Text:SetFormattedText("Level: |cff4beb2c%s|r", E.mylevel)
 	StatusFrame.Section3.Content.Line6.Text:SetFormattedText("Zone: |cff4beb2c%s|r", GetRealZoneText())
 	StatusFrame.Section3.Content.Line7.Text:SetFormattedText("Realm: |cff4beb2c%s|r", E.myrealm)
 
@@ -209,14 +253,14 @@ function E:CreateStatusFrame()
 	StatusFrame.Section4.Content.Button1:Point("LEFT", StatusFrame.Section4.Content, "LEFT")
 	StatusFrame.Section4.Content.Button1:SetText("Forum")
 	StatusFrame.Section4.Content.Button1:SetButtonState("DISABLED")
-	E:GetModule("Skins"):HandleButton(StatusFrame.Section4.Content.Button1, true)
+	Skins:HandleButton(StatusFrame.Section4.Content.Button1, true)
 
 	StatusFrame.Section4.Content.Button2 = CreateFrame("Button", nil, StatusFrame.Section4.Content, "UIPanelButtonTemplate")
 	StatusFrame.Section4.Content.Button2:Size(100, 25)
 	StatusFrame.Section4.Content.Button2:Point("RIGHT", StatusFrame.Section4.Content, "RIGHT")
 	StatusFrame.Section4.Content.Button2:SetText("Ticket")
 	StatusFrame.Section4.Content.Button2:SetButtonState("DISABLED")
-	E:GetModule("Skins"):HandleButton(StatusFrame.Section4.Content.Button2, true)
+	Skins:HandleButton(StatusFrame.Section4.Content.Button2, true)
 
 	E.StatusFrame = StatusFrame
 end
@@ -225,7 +269,7 @@ local function UpdateDynamicValues()
 	E.StatusFrame.Section2.Content.Line3.Text:SetFormattedText("Display Mode: |cff4beb2c%s|r", GetDisplayMode())
 	E.StatusFrame.Section2.Content.Line4.Text:SetFormattedText("Resolution: |cff4beb2c%s|r", GetResolution())
 	E.StatusFrame.Section3.Content.Line4.Text:SetFormattedText("Specialization: |cff4beb2c%s|r", GetSpecName())
-	E.StatusFrame.Section3.Content.Line5.Text:SetFormattedText("Level: |cff4beb2c%s|r", UnitLevel("player"))
+	E.StatusFrame.Section3.Content.Line5.Text:SetFormattedText("Level: |cff4beb2c%s|r", E.mylevel)
 	E.StatusFrame.Section3.Content.Line6.Text:SetFormattedText("Zone: |cff4beb2c%s|r", GetRealZoneText())
 end
 

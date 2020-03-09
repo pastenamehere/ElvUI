@@ -1,9 +1,12 @@
-local E, L, V, P, G = unpack(select(2, ...)); --Inport: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
-local UF = E:GetModule("UnitFrames");
+local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local UF = E:GetModule("UnitFrames")
+
+--Lua functions
+--WoW API / Variables
 
 function UF:Construct_RaidIcon(frame)
 	local tex = frame.RaisedElementParent.TextureParent:CreateTexture(nil, "OVERLAY")
-	tex:SetTexture([[Interface\AddOns\ElvUI\media\textures\raidicons]])
+	tex:SetTexture(E.Media.Textures.RaidIcons)
 	tex:Size(18)
 	tex:Point("CENTER", frame.Health, "TOP", 0, 2)
 	tex.SetTexture = E.noop

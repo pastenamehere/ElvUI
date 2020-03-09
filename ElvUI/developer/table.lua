@@ -1,21 +1,30 @@
-local setmetatable, getmetatable = setmetatable, getmetatable;
-local pairs, type = pairs, type;
-local table = table;
+--Lua functions
+local pairs, type = pairs, type
+local setmetatable, getmetatable = setmetatable, getmetatable
+--WoW API / Variables
 
-function table.copy(t, deep, seen)
-	seen = seen or {};
-	if(t == nil) then return nil; end
-	if(seen[t]) then return seen[t]; end
+local function table_copy(t, deep, seen)
+	if type(t) ~= "table" then return nil end
 
-	local nt = {};
+	if not seen then
+		seen = {}
+	elseif seen[t] then
+		return seen[t]
+	end
+
+	local nt = {}
 	for k, v in pairs(t) do
-		if(deep and type(v) == "table") then
-			nt[k] = table.copy(v, deep, seen);
+		if deep and type(v) == "table" then
+			nt[k] = table_copy(v, deep, seen)
 		else
-			nt[k] = v;
+			nt[k] = v
 		end
 	end
-	setmetatable(nt, table.copy(getmetatable(t), deep, seen));
-	seen[t] = nt;
-	return nt;
+
+	setmetatable(nt, table_copy(getmetatable(t), deep, seen))
+	seen[t] = nt
+
+	return nt
 end
+
+table.copy = table_copy

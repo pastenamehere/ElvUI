@@ -7,36 +7,32 @@ Description: Database of spellID's duration and debuff type.
 Dependencies: LibStub
 ]]
 
-local _G = _G
-local print = print
-local pairs = pairs
-local tostring = tostring
-local tonumber = tonumber
-local strsplit = strsplit
-local math_floor = math.floor
-local table_insert = table.insert
-local table_remove = table.remove
-local bit_band = bit.band
+local MAJOR, MINOR = "LibAuraInfo-1.0-ElvUI", 18
+if not LibStub then error(MAJOR .. " requires LibStub") return end
 
-local _
+local lib = LibStub:NewLibrary(MAJOR, MINOR)
+if not lib then return end
+
+lib.callbacks = lib.callbacks or LibStub("CallbackHandler-1.0"):New(lib)
+if not lib.callbacks then error(MAJOR .. " requires CallbackHandler-1.0") return end
+
+local pairs = pairs
+local select = select
+local tonumber = tonumber
+local band = bit.band
+local floor = math.floor
+local sub = string.sub
+local tinsert, tremove = table.insert, table.remove
+
 local UnitAura = UnitAura
 local UnitIsUnit = UnitIsUnit
 local UnitExists = UnitExists
 local UnitName = UnitName
 local UnitGUID = UnitGUID
 local GetSpellInfo = GetSpellInfo
-local UnitIsPlayer = UnitIsPlayer
+local GetSpellTexture = GetSpellTexture
 local GetTime = GetTime
 local COMBATLOG_OBJECT_TYPE_PLAYER = COMBATLOG_OBJECT_TYPE_PLAYER
-
-local MAJOR, MINOR = "LibAuraInfo-1.0-ElvUI", 18
-if not LibStub then error(MAJOR .. " requires LibStub.") return end
-
-local lib = LibStub:NewLibrary(MAJOR, MINOR)
-if not lib then return end
-
-lib.callbacks = lib.callbacks or LibStub("CallbackHandler-1.0"):New(lib)
-if not lib.callbacks then	error(MAJOR .. " CallbackHandler-1.0.") return end
 
 lib.confirmedDur = {}
 
@@ -47,21 +43,6 @@ lib.GUIDDurations = {}
 lib.GUIDData_name = {}
 lib.GUIDData_flags = {}
 
-local debugPrint
-do
-	local DEBUG = false
-	--[===[@debug@
-	DEBUG = true
-	--@end-debug@]===]
-	local print = print
-	function debugPrint(...)
-		if DEBUG then
-			print(...)
-		end
-	end
-	lib.debugPrint = debugPrint
-end
-
 --Save debuffType as a number, then return as a string when requested.
 lib.debuffTypes = {
 	Magic = 1,
@@ -69,107 +50,79 @@ lib.debuffTypes = {
 	Poison = 3,
 	Curse = 4,
 }
-for name, id in pairs(lib.debuffTypes) do 
+for name, id in pairs(lib.debuffTypes) do
 	lib.debuffTypes[id] = name
 end
 
 lib.trackAuras = true
 lib.callbacksUsed = {}
 
-do
-	--~ lib.callbacks:Fire("LibAuraInfo-1.0_xxxx", "blaw")
-	function lib.callbacks:OnUsed(target, eventname)
-	--~ 	debugPrint("OnUsed", target, eventname)
-		
-		lib.callbacksUsed[eventname] = lib.callbacksUsed[eventname] or {}
-		table_insert(lib.callbacksUsed[eventname], #lib.callbacksUsed[eventname]+1, target)
-		lib.trackAuras = true
-		lib.frame:RegisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
-		
-		lib.frame:RegisterEvent('UPDATE_MOUSEOVER_UNIT')
-		lib.frame:RegisterEvent('PLAYER_TARGET_CHANGED')
-		lib.frame:RegisterEvent('UNIT_TARGET')
-		lib.frame:RegisterEvent('UNIT_AURA')
-	--~ 	debugPrint("OnUsed", eventName)
-	end
+function lib.callbacks:OnUsed(target, eventname)
+	lib.callbacksUsed[eventname] = lib.callbacksUsed[eventname] or {}
+	tinsert(lib.callbacksUsed[eventname], #lib.callbacksUsed[eventname]+1, target)
+	lib.trackAuras = true
+	lib.frame:RegisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
+
+	lib.frame:RegisterEvent('UPDATE_MOUSEOVER_UNIT')
+	lib.frame:RegisterEvent('PLAYER_TARGET_CHANGED')
+	lib.frame:RegisterEvent('UNIT_TARGET')
+	lib.frame:RegisterEvent('UNIT_AURA')
 end
 
-do
-	function lib.callbacks:OnUnused(target, eventname)
-	--~ 	debugPrint("OnUsed", target, eventname)
-		if lib.callbacksUsed[eventname] then
-			for i = #lib.callbacksUsed[eventname], 1, -1 do 
-				if lib.callbacksUsed[eventname][i] == target then
-					table_remove(lib.callbacksUsed[eventname], i)
-				end
+function lib.callbacks:OnUnused(target, eventname)
+	if lib.callbacksUsed[eventname] then
+		for i = #lib.callbacksUsed[eventname], 1, -1 do
+			if lib.callbacksUsed[eventname][i] == target then
+				tremove(lib.callbacksUsed[eventname], i)
 			end
 		end
-		
-		for event, value in pairs(lib.callbacksUsed) do 
-			if #value == 0 then
-				lib.callbacksUsed[event] = nil
-			end
+	end
+
+	for event, value in pairs(lib.callbacksUsed) do
+		if #value == 0 then
+			lib.callbacksUsed[event] = nil
 		end
-		
-		for event in pairs(lib.callbacksUsed) do 
-			return
-		end
-		lib.trackAuras = false
-		lib.frame:UnregisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
-		
-		lib.frame:UnregisterEvent('UPDATE_MOUSEOVER_UNIT')
-		lib.frame:UnregisterEvent('PLAYER_TARGET_CHANGED')
-		lib.frame:UnregisterEvent('UNIT_TARGET')
-		lib.frame:UnregisterEvent('UNIT_AURA')
-	--~ 	debugPrint("OnUnused", eventName)
 	end
+
+	lib.trackAuras = false
+	lib.frame:UnregisterEvent('COMBAT_LOG_EVENT_UNFILTERED')
+
+	lib.frame:UnregisterEvent('UPDATE_MOUSEOVER_UNIT')
+	lib.frame:UnregisterEvent('PLAYER_TARGET_CHANGED')
+	lib.frame:UnregisterEvent('UNIT_TARGET')
+	lib.frame:UnregisterEvent('UNIT_AURA')
 end
 
-local Round
-do
-	function Round(num, zeros)
-		return math_floor(num * 10 ^ (zeros or 0) + 0.5) / 10 ^ (zeros or 0)
-	end
+local function Round(num)
+	return floor(num + .5)
 end
 
-local ResetUnitAuras
-do
-	local dstGUID
-	function ResetUnitAuras(unitID)
-		dstGUID = UnitGUID(unitID)
-		lib:RemoveAllAurasFromGUID(dstGUID)
-	end
+local function ResetUnitAuras(unitID)
+	lib:RemoveAllAurasFromGUID(UnitGUID(unitID))
 end
 
-do
-	local currentTime
-	function lib:AddAuraFromUnitID(dstGUID, name, texture, stackCount, debuffType, duration, expirationTime, srcGUID, spellID, filter)
-		currentTime = GetTime()
+function lib:AddAuraFromUnitID(dstGUID, name, texture, stackCount, debuffType, duration, expirationTime, srcGUID, spellID, filter)
+	self.GUIDAuras[dstGUID] = self.GUIDAuras[dstGUID] or {}
+	self.GUIDAuras[dstGUID][filter] = self.GUIDAuras[dstGUID][filter] or {}
 
-		self.GUIDAuras[dstGUID] = self.GUIDAuras[dstGUID] or {}
-		self.GUIDAuras[dstGUID][filter] = self.GUIDAuras[dstGUID][filter] or {}
-
-		table_insert(self.GUIDAuras[dstGUID][filter], #self.GUIDAuras[dstGUID][filter]+1, {
-			name = name,
-			texture = texture,
-			stackCount = stackCount,
-			debuffType = debuffType,
-			duration = duration,
-			expirationTime = expirationTime,
-			spellID = spellID,
-			srcGUID = srcGUID
-		})
-	end
+	tinsert(self.GUIDAuras[dstGUID][filter], #self.GUIDAuras[dstGUID][filter]+1, {
+		name = name,
+		texture = texture,
+		stackCount = stackCount,
+		debuffType = debuffType,
+		duration = duration,
+		expirationTime = expirationTime,
+		spellID = spellID,
+		srcGUID = srcGUID
+	})
 end
 
 local CheckUnitAuras
 do
 	local i
-	local _, name, rank, texture, stackCount, dispelType, duration, expirationTime, unitCaster, isStealable, spellID
+	local _, name, texture, stackCount, dispelType, duration, expirationTime, unitCaster, spellID
 	local dstGUID, dstName, srcGUID
 	function CheckUnitAuras(unitID, filterType)
-	--~ 	name, rank, icon, count, debuffType, duration, expirationTime, unitCaster, isStealable, shouldConsolidate, spellId  = UnitAura("unit", index or "name"[, "rank"[, "filter"]])
-		i = 1
 		dstGUID, dstName = UnitGUID(unitID), UnitName(unitID)
 
 		if lib.GUIDData_name[dstGUID] ~= dstName then
@@ -178,19 +131,21 @@ do
 
 		--Since we have a unitID, lets clear our aura table and use 100% accurate aura info.
 		if lib.GUIDAuras[dstGUID] and lib.GUIDAuras[dstGUID][filterType] then
-			for i = #lib.GUIDAuras[dstGUID][filterType], 1, -1 do
-				table_remove(lib.GUIDAuras[dstGUID][filterType], i)
+			for j = #lib.GUIDAuras[dstGUID][filterType], 1, -1 do
+				tremove(lib.GUIDAuras[dstGUID][filterType], j)
 			end
 		end
 
+		i = 1
 		while true do
-			name, rank, texture, stackCount, dispelType, duration, expirationTime, unitCaster, isStealable, _, spellID = UnitAura(unitID, i, filterType)
+			name, _, texture, stackCount, dispelType, duration, expirationTime, unitCaster, _, _, spellID = UnitAura(unitID, i, filterType)
 			if not name then break end
 
 			duration = Round(duration)
 
-			if not lib.auraInfo[spellID] then
-				lib.auraInfo[spellID] = (duration or 0) .. ";" .. (dispelType and lib.debuffTypes[dispelType] or 0)--add it temporarily.
+			if not lib.spellDuration[spellID] then
+				lib.spellDuration[spellID] = duration
+				lib.spellDebuffType[spellID] = (dispelType and lib.debuffTypes[dispelType] or 0)
 			elseif not lib.auraInfoPvP[spellID] then
 				if unitCaster and UnitExists(unitCaster) then
 					srcGUID = UnitGUID(unitCaster)
@@ -221,16 +176,19 @@ do
 			end
 
 			i = i + 1
+			srcGUID = nil
 		end
+
+		lib.callbacks:Fire("LibAuraInfo_UNIT_AURA", dstGUID)
 	end
 end
 
 lib.frame = lib.frame or CreateFrame("Frame")
-local function OnEvent(self, event, ...)
+lib.frame:SetScript("OnEvent", function(self, event, ...)
 	if self[event] then
 		self[event](self, event, ...)
 	end
-end
+end)
 
 function lib.frame:UPDATE_MOUSEOVER_UNIT()
 	ResetUnitAuras("mouseover")
@@ -246,7 +204,7 @@ end
 
 do
 	local targetID
-	function lib.frame:UNIT_TARGET(unitID)
+	function lib.frame:UNIT_TARGET(_, unitID)
 		if not UnitIsUnit(unitID, "player") then
 			targetID = unitID.."target"
 			ResetUnitAuras(targetID)
@@ -256,32 +214,12 @@ do
 	end
 end
 
-function lib.frame:UNIT_AURA(unitID)
+function lib.frame:UNIT_AURA(_, unitID)
+	if not unitID then return end
 	ResetUnitAuras(unitID)
 	CheckUnitAuras(unitID, "HELPFUL")
 	CheckUnitAuras(unitID, "HARMFUL")
 end
-
-function lib.frame:PLAYER_LOGOUT(unitID)
-	--[===[@debug@
-	_G.LAI_DB = LAI_DB
-	--@end-debug@]===]
-end
-
-function lib.frame:ADDON_LOADED()
-	--[===[@debug@
-	LAI_DB = _G.LAI_DB or {needConfirm = {}, new = {}}
-	self:RegisterEvent('PLAYER_LOGOUT')
-	--@end-debug@]===]
-end
-
-function lib.frame:PLAYER_LOGIN()
-	self:ADDON_LOADED()
-end
-
-lib.frame:SetScript("OnEvent", OnEvent)
-lib.frame:RegisterEvent('ADDON_LOADED')
-lib.frame:RegisterEvent('PLAYER_LOGIN')
 
 ------------------------------------------------------------------------------------------------------
 --~ Dimminshing Returns
@@ -479,7 +417,6 @@ lib.drSpells = {
 	-- Intimidating Shout
 	[5246] = "fear",
 
-
 	--[[ CONTROL STUNS ]]--
 	-- Intercept (Felguard)
 	[30153] = "ctrlstun",
@@ -630,7 +567,6 @@ lib.drSpells = {
 	[55508] = "ctrlroot",
 	[55509] = "ctrlroot",
 
-
 	--[[ RANDOM ROOTS ]]--
 	-- Improved Hamstring
 	[23694] = "rndroot",
@@ -685,7 +621,6 @@ lib.drSpells = {
 
 	-- Entrapment
 	[64804] = "entrapment",
-	[64804] = "entrapment",
 	[19185] = "entrapment",
 }
 
@@ -696,9 +631,6 @@ lib.pveDR = {
 	["cyclone"] = true,
 }
 
---~ lib.guidDREffects = {}
-
---
 lib.GUIDDrEffects_reset = {}
 lib.GUIDDrEffects_diminished = {}
 
@@ -706,14 +638,13 @@ do
 	local drType, key, reset
 	function lib:GUIDGainedDRAura(dstGUID, spellID, dstIsPlayer)
 		drType = self.drSpells[spellID]
-		
+
 		if dstIsPlayer or self.pveDR[drType] then
 			key = dstGUID..drType
 			reset = self.GUIDDrEffects_reset[key]
 			if reset and reset <= GetTime() then
 				self.GUIDDrEffects_diminished[key] = 1
 			end
-	--~ 		debugPrint("GUIDGainedDRAura", dstGUID, drType, self.GUIDDrEffects_diminished[key])
 		end
 	end
 end
@@ -729,8 +660,7 @@ local function NextDR(diminished)
 end
 
 do
-	local key
-	local drType
+	local drType, key
 	function lib:GUIDRemovedDRAura(dstGUID, spellID, dstIsPlayer)
 		drType = self.drSpells[spellID]
 		if dstIsPlayer or self.pveDR[drType] then
@@ -740,9 +670,9 @@ do
 		end
 	end
 end
-	
+
 do
-	local duration, drType, key, reset
+	local drType, key, reset
 	function lib:GetDRDuration(dstGUID, spellID, duration)
 		duration = duration or self:GetDuration(spellID, nil, dstGUID)
 		drType = self.drSpells[spellID]
@@ -753,11 +683,10 @@ do
 				return duration * (self.GUIDDrEffects_diminished[key] or 1)
 			end
 		end
-		
+
 		return duration
 	end
 end
-
 
 -------------------------------------------------------------------------------------------------------
 --~ Combatlog
@@ -773,36 +702,31 @@ function lib:GetSpellTexture(spellID)
 	return GetSpellTexture(spellID) or select(3, GetSpellInfo(spellID))
 end
 
-do
-	function lib.frame:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
-		if lib.GUIDBlackList[dstGUID] then return end
+function lib.frame:COMBAT_LOG_EVENT_UNFILTERED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
+	if lib.GUIDBlackList[dstGUID] then return end
 
-		if srcGUID and not lib.GUIDData_flags[srcGUID] then
-			SaveGUIDInfo(srcGUID, srcName, srcFlags)
-		end
-		if dstGUID and not lib.GUIDData_flags[dstGUID] then
-			SaveGUIDInfo(dstGUID, dstName, dstFlags)
-		end
+	if srcGUID and not lib.GUIDData_flags[srcGUID] then
+		SaveGUIDInfo(srcGUID, srcName, srcFlags)
+	end
+	if dstGUID and not lib.GUIDData_flags[dstGUID] then
+		SaveGUIDInfo(dstGUID, dstName, dstFlags)
+	end
 
-		if self[eventType] then
-			self[eventType](self, eventType, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
-		end
+	if self[eventType] then
+		self[eventType](self, eventType, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
 	end
 end
 
 do
-	local data, getTime
-	----------------------------------------------
-	function lib:RemoveExpiredAuras(dstGUID)	--
-	-- Remove expired auras from a GUID. 		--
-	----------------------------------------------
+	local data
+	-- Remove expired auras from a GUID
+	function lib:RemoveExpiredAuras(dstGUID)
 		if self.GUIDAuras[dstGUID] then
-			getTime = GetTime()
 			for filter in pairs(self.GUIDAuras[dstGUID]) do
-				for i = #self.GUIDAuras[dstGUID][filter], 1, -1 do 
+				for i = #self.GUIDAuras[dstGUID][filter], 1, -1 do
 					data = self.GUIDAuras[dstGUID][filter][i]
-					if getTime > data.expirationTime then
-						table_remove(self.GUIDAuras[dstGUID][filter], i)
+					if GetTime() > data.expirationTime then
+						tremove(self.GUIDAuras[dstGUID][filter], i)
 					end
 				end
 			end
@@ -811,47 +735,13 @@ do
 end
 
 do
-	local data, spellName, newName, oldName
-	local spellName
-	----------------------------------------------------------------------
-	function lib:checkIfAuraAlreadyOnGUID(dstGUID, spellID, srcGUID, filter)	--
-	-- Used for debuging and learning the combatlog. 					--
-	----------------------------------------------------------------------
-		spellName = GetSpellInfo(spellID)
-		for i = #self.GUIDAuras[dstGUID][filter], 1, -1  do 
-			data = self.GUIDAuras[dstGUID][filter][i]
-			if data.spellID == spellID  then --and srcGUID ~= data.srcGUID
-				if srcGUID ~= data.srcGUID then
-					newName = self:GetGUIDInfo(srcGUID)
-					oldName = self:GetGUIDInfo(data.srcGUID)
-					if newName == oldName then
-						debugPrint("checkIfAuraAlreadyOnGUID", spellID, spellName, "new:"..tostring(srcGUID), "old:"..tostring(data.srcGUID))
-					else
-						debugPrint("checkIfAuraAlreadyOnGUID", spellID, spellName, "new:"..tostring(newName), "old:"..tostring(oldName))
-					end
-				end
-			end
-		
-		end
-	end
-end
-
-do
-	local duration, debuffType, currentTime
-	-------------------------------------------------------------------------------
-	function lib:AddAuraToGUID(dstGUID, name, texture, spellID, srcGUID, filter) --
-	-- Add a auraID to our GUID list.											 --
-	-------------------------------------------------------------------------------
+	local duration
+	-- Add a auraID to our GUID list
+	function lib:AddAuraToGUID(dstGUID, name, texture, spellID, srcGUID, filter)
 		duration = self:GetDuration(spellID, srcGUID, dstGUID)
-		debuffType = self:GetDebuffType(spellID)
-		currentTime = GetTime()
 
 		self.GUIDAuras[dstGUID] = self.GUIDAuras[dstGUID] or {}
 		self.GUIDAuras[dstGUID][filter] = self.GUIDAuras[dstGUID][filter] or {}
-
-		--[===[@debug@
-	--~ 	self:checkIfAuraAlreadyOnGUID(dstGUID, spellID, srcGUID, filter)
-		--@end-debug@]===]
 
 		--[[
 			I didn't want to use tables this way when I started the project but due to multiple instnces of a spellID being on a GUID I couldn't do a hash table lookup.
@@ -861,15 +751,15 @@ do
 
 		]]
 
-		table_insert(self.GUIDAuras[dstGUID][filter], #self.GUIDAuras[dstGUID][filter]+1, {
+		tinsert(self.GUIDAuras[dstGUID][filter], #self.GUIDAuras[dstGUID][filter] + 1, {
 			name = name,
 			texture = texture,
-			debuffType = debuffType,
+			debuffType = self:GetDebuffType(spellID),
 			duration = duration,
-			expirationTime = duration == 0 and 0 or currentTime + duration,
+			expirationTime = duration == 0 and 0 or GetTime() + duration,
 			spellID = spellID,
 			srcGUID = srcGUID,
-			isDebuff = filter,
+			isDebuff = filter
 		})
 
 	--~ 	table.sort(self.GUIDAuras[dstGUID], function(a,b)
@@ -880,10 +770,8 @@ end
 
 do
 	local data
-	--------------------------------------------------------------
-	function lib:AddAuraDose(dstGUID, spellID, srcGUID, filter)	--
-	-- Increase stack count of a aura.							--
-	--------------------------------------------------------------
+	-- Increase stack count of a aura
+	function lib:AddAuraDose(dstGUID, spellID, srcGUID, filter)
 		if self.GUIDAuras[dstGUID] and self.GUIDAuras[dstGUID][filter] then
 			if srcGUID then
 				for i = 1, #self.GUIDAuras[dstGUID][filter] do
@@ -914,17 +802,15 @@ end
 
 do
 	local data
-	------------------------------------------------------------------
-	function lib:RemoveAuraDose(dstGUID, spellID, srcGUID, filter)	--
-	-- Remove 1 stack from a aura.									--
-	------------------------------------------------------------------
+	-- Remove 1 stack from a aura
+	function lib:RemoveAuraDose(dstGUID, spellID, srcGUID, filter)
 		if self.GUIDAuras[dstGUID] and self.GUIDAuras[dstGUID][filter] then
 			if srcGUID then
 				for i = 1, #self.GUIDAuras[dstGUID][filter] do
 					data = self.GUIDAuras[dstGUID][filter][i]
 					if data.spellID == spellID and data.srcGUID == srcGUID then
 						data.stackCount = (data.stackCount or 1) - 1
-	--~ 					data.expirationTime = data.duration + GetTime()
+					--	data.expirationTime = data.duration + GetTime()
 
 						return true, data.stackCount, data.expirationTime
 					end
@@ -935,7 +821,7 @@ do
 				data = self.GUIDAuras[dstGUID][filter][i]
 				if data.spellID == spellID then
 					data.stackCount = (data.stackCount or 1) - 1
-	--~ 				data.expirationTime = data.duration + GetTime()
+				--	data.expirationTime = data.duration + GetTime()
 
 					return true, data.stackCount, data.expirationTime
 				end
@@ -948,10 +834,8 @@ end
 
 do
 	local data
-	--------------------------------------------------------------
-	function lib:RefreshAura(dstGUID, spellID, srcGUID, filter)	--
-	-- Refresh the start and expiration time of a aura.			--
-	--------------------------------------------------------------
+	-- Refresh the start and expiration time of a aura
+	function lib:RefreshAura(dstGUID, spellID, srcGUID, filter)
 		if self.GUIDAuras[dstGUID] and self.GUIDAuras[dstGUID][filter] then
 			if srcGUID then
 				for i = 1, #self.GUIDAuras[dstGUID][filter] do
@@ -980,16 +864,14 @@ end
 
 do
 	local data
-	----------------------------------------------------------------------
-	function lib:RemoveAuraFromGUID(dstGUID, spellID, srcGUID, filter)	--
-	-- Remove a aura from a GUID.										--
-	----------------------------------------------------------------------
+	-- Remove a aura from a GUID
+	function lib:RemoveAuraFromGUID(dstGUID, spellID, srcGUID, filter)
 		if lib.GUIDAuras[dstGUID] and lib.GUIDAuras[dstGUID][filter] then
 			if srcGUID then
 				for i = #lib.GUIDAuras[dstGUID][filter],1, -1 do
 					data = lib.GUIDAuras[dstGUID][filter][i]
 					if data.spellID == spellID and srcGUID == data.srcGUID then
-						table_remove(lib.GUIDAuras[dstGUID][filter], i)
+						tremove(lib.GUIDAuras[dstGUID][filter], i)
 						lib.callbacks:Fire("RemoveAuraFromGUID", dstGUID)
 						return
 					end
@@ -999,7 +881,7 @@ do
 			for i = #lib.GUIDAuras[dstGUID][filter],1, -1 do
 				data = lib.GUIDAuras[dstGUID][filter][i]
 				if data.spellID == spellID then
-					table_remove(lib.GUIDAuras[dstGUID][filter], i)
+					tremove(lib.GUIDAuras[dstGUID][filter], i)
 					lib.callbacks:Fire("RemoveAuraFromGUID", dstGUID)
 					return
 				end
@@ -1009,77 +891,60 @@ do
 	end
 end
 
-------------------------------------------------------
-function lib:RemoveAllAurasFromGUID(dstGUID)		--
--- Remove all auras on a GUID. They must have died.	--
-------------------------------------------------------
+-- Remove all auras on a GUID. They must have died
+function lib:RemoveAllAurasFromGUID(dstGUID)
 	if self.GUIDAuras[dstGUID] then
 		for filter in pairs(self.GUIDAuras[dstGUID]) do
 			for i=#self.GUIDAuras[dstGUID][filter], 1, -1 do
-				table_remove(self.GUIDAuras[dstGUID][filter], i)
+				tremove(self.GUIDAuras[dstGUID][filter], i)
 			end
 		end
 	end
 end
 
-do
-	local spellID, spellName, spellSchool, auraType
-	function lib.frame:SPELL_AURA_REMOVED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
-		spellID, spellName, spellSchool, auraType = ...
-		lib:RemoveAuraFromGUID(dstGUID, spellID, srcGUID, auraType == "DEBUFF" and "HARMFUL" or "HELPFUL")
+function lib.frame:SPELL_AURA_REMOVED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellID, spellName, spellSchool, auraType)
+	lib:RemoveAuraFromGUID(dstGUID, spellID, srcGUID, auraType == "DEBUFF" and "HARMFUL" or "HELPFUL")
 
-		if lib.drSpells[spellID] then
-			lib:GUIDRemovedDRAura(dstGUID, spellID, lib:FlagIsPlayer(dstFlags))
-		end
-		lib.callbacks:Fire("LibAuraInfo_AURA_REMOVED", dstGUID, spellID, srcGUID)
+	if lib.drSpells[spellID] then
+		lib:GUIDRemovedDRAura(dstGUID, spellID, lib:FlagIsPlayer(dstFlags))
+	end
+	lib.callbacks:Fire("LibAuraInfo_AURA_REMOVED", dstGUID, spellID, srcGUID)
+end
+
+function lib.frame:SPELL_AURA_APPLIED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellID, spellName, spellSchool, auraType)
+	if lib.drSpells[spellID] then
+		lib:GUIDGainedDRAura(dstGUID, spellID, lib:FlagIsPlayer(dstFlags))
+	end
+
+	if lib.spellDuration[spellID] then
+		lib:RemoveExpiredAuras(dstGUID)
+		lib:AddAuraToGUID(dstGUID, spellName, lib:GetSpellTexture(spellID), spellID, srcGUID, auraType == "DEBUFF" and "HARMFUL" or "HELPFUL")
+		lib.callbacks:Fire("LibAuraInfo_AURA_APPLIED", dstGUID, spellID, srcGUID, auraType)
 	end
 end
 
 do
-	local spellID, spellName, spellSchool, auraType
-	function lib.frame:SPELL_AURA_APPLIED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
-		spellID, spellName, spellSchool, auraType = ...
-
-		if lib.drSpells[spellID] then
-			lib:GUIDGainedDRAura(dstGUID, spellID, lib:FlagIsPlayer(dstFlags))
-		end
-
-		if lib.auraInfo[spellID] then
-			lib:RemoveExpiredAuras(dstGUID)
-			lib:AddAuraToGUID(dstGUID, spellName, lib:GetSpellTexture(spellID), spellID, srcGUID, auraType == "DEBUFF" and "HARMFUL" or "HELPFUL")
-			lib.callbacks:Fire("LibAuraInfo_AURA_APPLIED", dstGUID, spellID, srcGUID, auraType)
-		end
-	end
-end
-
-do
-	local spellID, spellName, spellSchool, auraType
-	local refreshed, expirationTime
-	function lib.frame:SPELL_AURA_REFRESH(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
-		spellID, spellName, spellSchool, auraType = ...
-
+	local refreshed
+	function lib.frame:SPELL_AURA_REFRESH(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellID, spellName, spellSchool, auraType)
 		if lib.drSpells[spellID] then
 			lib:GUIDRemovedDRAura(dstGUID, spellID, lib:FlagIsPlayer(dstFlags))
 			lib:GUIDGainedDRAura(dstGUID, spellID, lib:FlagIsPlayer(dstFlags))
 		end
 
-		refreshed, expirationTime = lib:RefreshAura(dstGUID, spellID, srcGUID, auraType == "DEBUFF" and "HARMFUL" or "HELPFUL")
+		refreshed = lib:RefreshAura(dstGUID, spellID, srcGUID, auraType == "DEBUFF" and "HARMFUL" or "HELPFUL")
 		if refreshed then
 			lib.callbacks:Fire("LibAuraInfo_AURA_REFRESH", dstGUID, spellID, srcGUID, spellSchool, auraType)
 			return
 		end
 
-		self:SPELL_AURA_APPLIED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
+		self:SPELL_AURA_APPLIED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellID, spellName, spellSchool, auraType)
 	end
 end
 
 do
-	local spellID, spellName, spellSchool, auraType
 	local dosed, stackCount, expirationTime
 	--DOSE = spell stacking
-	function lib.frame:SPELL_AURA_APPLIED_DOSE(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
-		spellID, spellName, spellSchool, auraType = ...
-
+	function lib.frame:SPELL_AURA_APPLIED_DOSE(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellID, spellName, spellSchool, auraType)
 		dosed, stackCount, expirationTime = lib:AddAuraDose(dstGUID, spellID, srcGUID, auraType == "DEBUFF" and "HARMFUL" or "HELPFUL")
 		if dosed then
 			lib.callbacks:Fire("LibAuraInfo_AURA_APPLIED_DOSE", dstGUID, spellID, srcGUID, spellSchool, auraType, stackCount, expirationTime)
@@ -1088,16 +953,13 @@ do
 
 		--Spell isn't in our list, let's add it.
 		--Note this event could have fired on the 5th stack but our spell frame will only show it applied once.
-		self:SPELL_AURA_APPLIED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
+		self:SPELL_AURA_APPLIED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellID, spellName, spellSchool, auraType)
 	end
 end
 
 do
-	local spellID, spellName, spellSchool, auraType
 	local dosed, stackCount, expirationTime
-	function lib.frame:SPELL_AURA_APPLIED_REMOVED_DOSE(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
-		spellID, spellName, spellSchool, auraType  = ...
-
+	function lib.frame:SPELL_AURA_APPLIED_REMOVED_DOSE(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, spellID, spellName, spellSchool, auraType)
 		dosed, stackCount, expirationTime = lib:RemoveAuraDose(dstGUID, spellID, srcGUID, auraType == "DEBUFF" and "HARMFUL" or "HELPFUL")
 		if dosed then
 			lib.callbacks:Fire("LibAuraInfo_AURA_APPLIED_DOSE", dstGUID, spellID, srcGUID, spellSchool, auraType, stackCount, expirationTime)
@@ -1106,14 +968,12 @@ do
 	end
 end
 
-function lib.frame:SPELL_AURA_BROKEN_SPELL(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
-	local spellID, spellName, spellSchool, auraType  = ...
-	self:SPELL_AURA_REMOVED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
+function lib.frame:SPELL_AURA_BROKEN_SPELL(...)
+	self:SPELL_AURA_REMOVED(...)
 end
 
-function lib.frame:SPELL_AURA_BROKEN(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
-	local spellID, spellName, spellSchool, auraType  = ...
-	self:SPELL_AURA_REMOVED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
+function lib.frame:SPELL_AURA_BROKEN(...)
+	self:SPELL_AURA_REMOVED(...)
 end
 
 function lib.frame:UNIT_DIED(event, timestamp, eventType, srcGUID, srcName, srcFlags, dstGUID, dstName, dstFlags, ...)
@@ -1136,10 +996,9 @@ function lib.frame:PARTY_KILL(...)
 end
 
 function lib:FlagIsPlayer(flags)
-	if bit_band(flags, COMBATLOG_OBJECT_TYPE_PLAYER) == COMBATLOG_OBJECT_TYPE_PLAYER then
+	if band(flags, COMBATLOG_OBJECT_TYPE_PLAYER) == COMBATLOG_OBJECT_TYPE_PLAYER then
 		return true
 	end
-	return nil
 end
 
 --------------------------------------------------------------
@@ -1149,23 +1008,19 @@ local GUIDIsPlayer
 do
 	local B, maskedB
 	function GUIDIsPlayer(guid)
-		B = tonumber(guid:sub(5, 5), 16);
+		B = tonumber(sub(guid, 5, 5), 16);
 		maskedB = B % 8; -- x % 8 has the same effect as x & 0x7 on numbers <= 0xf
-	--~ 	local knownTypes = {[0]="player", [3]="NPC", [4]="pet", [5]="vehicle"};
-	--~ 	print("Your target is a " .. (knownTypes[maskedB] or " unknown entity!"));
-		if maskedB == 0 then
-			return true
-		end
-		return false
+	--	local knownTypes = {[0]="player", [3]="NPC", [4]="pet", [5]="vehicle"};
+	--	print("Your target is a " .. (knownTypes[maskedB] or " unknown entity!"));
+		return maskedB == 0
 	end
 end
 
 do
-	local dstIsPlayer, spellStr, duration, dur, debuffType
+	local duration, dur
 	--Return the duration of a spell.
 	function lib:GetDuration(spellID, srcGUID, dstGUID, dstIsPlayer)
 		dstIsPlayer = dstIsPlayer or dstGUID and GUIDIsPlayer(dstGUID) or false
-		spellStr = ""
 		if dstIsPlayer and lib.auraInfoPvP[spellID] then
 			--Receiver is a player and the spell has a PvP duration. Return the pvp duration.
 			duration = lib.auraInfoPvP[spellID]
@@ -1175,7 +1030,7 @@ do
 			end
 
 			return tonumber(duration or 0)
-		elseif self.auraInfo[spellID] then
+		elseif self.spellDuration[spellID] then
 			--Check caster GUID was given.
 			if srcGUID then
 				--Check if we've seen that caster cast a spell with a duration that doesn't match our own (spec/glphed into something?)
@@ -1190,29 +1045,22 @@ do
 				end
 			end
 
-			duration, debuffType = strsplit(";", self.auraInfo[spellID])
-			return tonumber(duration or 0)
+			return self.spellDuration[spellID]
 		end
 	end
 end
 
 do
-	local duration, debuffType
+	local debuffType
 	--Return the debuff type of a spell.
 	function lib:GetDebuffType(spellID)
-		if self.auraInfo[spellID] then
-			duration, debuffType = strsplit(";", self.auraInfo[spellID])
+		if self.spellDuration[spellID] then
+			debuffType = self.spellDebuffType[spellID]
 			if debuffType then
-				debuffType = tonumber(debuffType)
-				if debuffType == 0 then
-					return "none" --Lowercase because DebuffTypeColor["none"] is lowercase.
-				else
-					return self.debuffTypes[debuffType] or "unknown"
-				end
+				return self.debuffTypes[debuffType] or "unknown"
 			end
 			return "none"--Lowercase because DebuffTypeColor["none"] is lowercase.
 		end
-		return nil
 	end
 end
 
@@ -1235,7 +1083,7 @@ do
 	function lib:GUIDAura(dstGUID, i, filter)
 		if self.GUIDAuras[dstGUID] and self.GUIDAuras[dstGUID][filter] and self.GUIDAuras[dstGUID][filter][i] then
 			data = self.GUIDAuras[dstGUID][filter][i]
-			return true, data.name, data.texture, data.count or 0, data.debuffType, data.duration, data.expirationTime, data.srcGUID, data.spellID
+			return true, data.name, data.texture, data.stackCount or 0, data.debuffType, data.duration, data.expirationTime, data.srcGUID, data.spellID
 		end
 		return false
 	end
@@ -1249,14 +1097,14 @@ do
 				for i = 1, #self.GUIDAuras[dstGUID][filter] do
 					data = self.GUIDAuras[dstGUID][filter][i]
 					if data.spellID == spellID and data.srcGUID == srcGUID then
-						return true, data.count or 0, data.debuffType, data.duration, data.expirationTime, data.isDebuff, data.srcGUID
+						return true, data.stackCount or 0, data.debuffType, data.duration, data.expirationTime, data.isDebuff, data.srcGUID
 					end
 				end
 			end
 			for i = 1, #self.GUIDAuras[dstGUID][filter] do
 				data = self.GUIDAuras[dstGUID][filter][i]
 				if data.spellID == spellID then
-					return true, data.count or 0, data.debuffType, data.duration, data.expirationTime, data.isDebuff, data.srcGUID
+					return true, data.stackCount or 0, data.debuffType, data.duration, data.expirationTime, data.isDebuff, data.srcGUID
 				end
 			end
 		end
@@ -1266,7 +1114,6 @@ end
 
 do
 	local drType, key, reset
-	local GetTime = GetTime
 	function lib:HasDREffect(dstGUID, spellID)
 		drType = self.drSpells[spellID]
 		if drType then
@@ -1279,7 +1126,7 @@ do
 		return false
 	end
 end
-	
+
 function lib:GetGUIDInfo(GUID)
 	return self.GUIDData_name[GUID], self.GUIDData_flags[GUID]
 end

@@ -20,9 +20,14 @@ This is a modified version by Elv for ElvUI
 ------------------------------------------------------------------------------------]]
 
 local MAJOR, MINOR = "LibSimpleSticky-1.0", 2
-local StickyFrames, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
+local StickyFrames = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not StickyFrames then return end
+
+local twipe = table.wipe
+
+local GetCursorPosition = GetCursorPosition
+local IsShiftKeyDown = IsShiftKeyDown
 
 --[[---------------------------------------------------------------------------------
   Class declaration, along with a temporary table to hold any existing OnUpdate
@@ -33,6 +38,20 @@ StickyFrames.scripts = StickyFrames.scripts or {}
 StickyFrames.rangeX = 15
 StickyFrames.rangeY = 15
 StickyFrames.sticky = StickyFrames.sticky or {}
+
+local groupBlacklist = {}
+
+local function isGroupPoint(frame, frame2)
+	if groupBlacklist[frame2] then
+		return true
+	else
+		local _, point = frame2:GetPoint()
+		if groupBlacklist[point] or frame.parent == point then
+			groupBlacklist[frame2.parent] = true
+			return true
+		end
+	end
+end
 
 --[[---------------------------------------------------------------------------------
   StickyFrames:StartMoving() - Sets a custom OnUpdate for the frame so it follows
@@ -78,6 +97,7 @@ end
 function StickyFrames:StopMoving(frame)
 	frame:SetScript("OnUpdate", self.scripts[frame])
 	self.scripts[frame] = nil
+	twipe(groupBlacklist)
 
 	if StickyFrames.sticky[frame] then
 		local sticky = StickyFrames.sticky[frame]
@@ -126,7 +146,6 @@ function StickyFrames:GetUpdateFunc(frame, frameList, xoffset, yoffset, left, to
 	return function()
 		local x,y = GetCursorPosition()
 		local s = frame:GetEffectiveScale()
-		local sticky = nil
 
 		x,y = x/s,y/s
 
@@ -136,7 +155,7 @@ function StickyFrames:GetUpdateFunc(frame, frameList, xoffset, yoffset, left, to
 		StickyFrames.sticky[frame] = nil
 		for i = 1, #frameList do
 			local v = frameList[i]
-			if frame ~= v and frame ~= v:GetParent() and not IsShiftKeyDown() and v:IsVisible() then
+			if frame ~= v and frame ~= v:GetParent() and not isGroupPoint(frame, v) and not IsShiftKeyDown() and v:IsVisible() then
 				if self:SnapFrame(frame, v, left, top, right, bottom) then
 					StickyFrames.sticky[frame] = v
 					break
@@ -165,8 +184,8 @@ function StickyFrames:SnapFrame(frameA, frameB, left, top, right, bottom)
 	local sA, sB = frameA:GetEffectiveScale(), frameB:GetEffectiveScale()
 	local xA, yA = frameA:GetCenter()
 	local xB, yB = frameB:GetCenter()
-	local hA, hB = frameA:GetHeight() / 2, ((frameB:GetHeight() * sB) / sA) / 2
-	local wA, wB = frameA:GetWidth() / 2, ((frameB:GetWidth() * sB) / sA) / 2
+	local hA = frameA:GetHeight() / 2
+	local wA = frameA:GetWidth() / 2
 
 	local newX, newY = xA, yA
 
@@ -178,9 +197,6 @@ function StickyFrames:SnapFrame(frameA, frameB, left, top, right, bottom)
 	-- Lets translate B's coords into A's scale
 	if not xB or not yB or not sB or not sA or not sB then return end
 	xB, yB = (xB*sB) / sA, (yB*sB) / sA
-
-	local stickyAx, stickyAy = wA * 0.75, hA * 0.75
-	local stickyBx, stickyBy = wB * 0.75, hB * 0.75
 
 	-- Grab the edges of each frame, for easier comparison
 

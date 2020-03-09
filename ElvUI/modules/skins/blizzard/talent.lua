@@ -1,79 +1,117 @@
-local E, L, V, P, G = unpack(select(2, ...));
-local S = E:GetModule("Skins");
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local S = E:GetModule("Skins")
 
-local _G = _G;
+--Lua functions
+local _G = _G
+local unpack = unpack
+--WoW API / Variables
 
 local function LoadSkin()
-	if(E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.talent ~= true) then return; end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.talent then return end
 
-	PlayerTalentFrame:StripTextures(true);
-	PlayerTalentFrame:CreateBackdrop("Transparent");
-	PlayerTalentFrame.backdrop:Point("TOPLEFT", 13, -12);
-	PlayerTalentFrame.backdrop:Point("BOTTOMRIGHT", -31, 76);
+	PlayerTalentFrame:StripTextures(true)
+	PlayerTalentFrame:CreateBackdrop("Transparent")
+	PlayerTalentFrame.backdrop:Point("TOPLEFT", 11, -12)
+	PlayerTalentFrame.backdrop:Point("BOTTOMRIGHT", -32, 76)
 
-	S:HandleCloseButton(PlayerTalentFrameCloseButton);
+	S:SetBackdropHitRect(PlayerTalentFrame)
 
-	PlayerTalentFrameStatusFrame:StripTextures();
-	PlayerTalentFrameStatusFrame:Point("TOPLEFT", PlayerTalentFrame, "TOPLEFT", 57, -40)
-	PlayerTalentFrameStatusFrame:HookScript("OnShow", function(self)
-		if(GlyphFrame and GlyphFrame:IsShown()) then
-			self:Hide();
+	do
+		local offset
+
+		local talentGroups = GetNumTalentGroups(false, false)
+		local petTalentGroups = GetNumTalentGroups(false, true)
+
+		if talentGroups + petTalentGroups > 1 then
+			S:SetUIPanelWindowInfo(PlayerTalentFrame, "width", nil, 32)
+			offset = true
+		else
+			S:SetUIPanelWindowInfo(PlayerTalentFrame, "width")
 		end
-	end);
 
-	S:HandleButton(PlayerTalentFrameActivateButton, true);
-	PlayerTalentFrameActivateButton:Point("TOP", PlayerTalentFrame, "TOP", 0, -40)
-	PlayerTalentFrameActivateButton:HookScript("OnShow", function(self)
-		if(GlyphFrame and GlyphFrame:IsShown()) then
-			self:Hide();
+		hooksecurefunc("PlayerTalentFrame_UpdateSpecs", function(_, numTalentGroups, _, numPetTalentGroups)
+			if offset and numTalentGroups + numPetTalentGroups <= 1 then
+				S:SetUIPanelWindowInfo(PlayerTalentFrame, "width")
+				offset = nil
+			elseif not offset and numTalentGroups + numPetTalentGroups > 1 then
+				S:SetUIPanelWindowInfo(PlayerTalentFrame, "width", nil, 32)
+				offset = true
+			end
+		end)
+	end
+
+	S:HandleCloseButton(PlayerTalentFrameCloseButton, PlayerTalentFrame.backdrop)
+
+	local function glyphFrameOnShow(self)
+		if GlyphFrame and GlyphFrame:IsShown() then
+			self:Hide()
 		end
-	end);
+	end
 
-	PlayerTalentFramePointsBar:StripTextures();
-	PlayerTalentFramePreviewBar:StripTextures();
+	PlayerTalentFrameStatusFrame:HookScript("OnShow", glyphFrameOnShow)
+	PlayerTalentFrameActivateButton:HookScript("OnShow", glyphFrameOnShow)
 
-	S:HandleButton(PlayerTalentFrameResetButton);
-	PlayerTalentFrameLearnButton:Point("RIGHT", PlayerTalentFrameResetButton, "LEFT", -1, 0);
-	S:HandleButton(PlayerTalentFrameLearnButton);
+	PlayerTalentFrameStatusFrame:StripTextures()
+	PlayerTalentFramePointsBar:StripTextures()
+	PlayerTalentFramePreviewBar:StripTextures()
 
-	PlayerTalentFramePreviewBarFiller:StripTextures();
+	S:HandleButton(PlayerTalentFrameActivateButton)
+	S:HandleButton(PlayerTalentFrameResetButton)
+	S:HandleButton(PlayerTalentFrameLearnButton)
 
-	PlayerTalentFrameScrollFrame:StripTextures();
-	PlayerTalentFrameScrollFrame:CreateBackdrop("Default");
-	S:HandleScrollBar(PlayerTalentFrameScrollFrameScrollBar);
+	PlayerTalentFramePreviewBarFiller:StripTextures()
+
+	PlayerTalentFrameScrollFrame:StripTextures()
+	PlayerTalentFrameScrollFrame:CreateBackdrop("Default")
+	S:HandleScrollBar(PlayerTalentFrameScrollFrameScrollBar)
 
 	for i = 1, MAX_NUM_TALENTS do
-		local talent = _G["PlayerTalentFrameTalent"..i];
-		local icon = _G["PlayerTalentFrameTalent"..i.."IconTexture"];
-		local rank = _G["PlayerTalentFrameTalent"..i.."Rank"];
+		local talent = _G["PlayerTalentFrameTalent"..i]
+		local icon = _G["PlayerTalentFrameTalent"..i.."IconTexture"]
+		local rank = _G["PlayerTalentFrameTalent"..i.."Rank"]
 
-		if (talent) then
-			talent:StripTextures();
-			talent:SetTemplate("Default");
-			talent:StyleButton();
+		if talent then
+			talent:StripTextures()
+			talent:SetTemplate("Default")
+			talent:StyleButton()
 
-			icon:SetInside();
-			icon:SetTexCoord(unpack(E.TexCoords));
-			icon:SetDrawLayer("ARTWORK");
+			icon:SetInside()
+			icon:SetTexCoord(unpack(E.TexCoords))
+			icon:SetDrawLayer("ARTWORK")
 
-			rank:SetFont(E.LSM:Fetch("font", E.db["general"].font), 12, "OUTLINE");
+			rank:SetFont(E.LSM:Fetch("font", E.db.general.font), 12, "OUTLINE")
 		end
 	end
 
 	for i = 1, 4 do
-		S:HandleTab(_G["PlayerTalentFrameTab" .. i]);
+		S:HandleTab(_G["PlayerTalentFrameTab"..i])
 	end
 
 	for i = 1, MAX_TALENT_TABS do
-		local tab = _G["PlayerSpecTab" .. i];
-		tab:GetRegions():Hide();
+		local tab = _G["PlayerSpecTab"..i]
+		tab:GetRegions():Hide()
 
-		tab:SetTemplate("Default");
-		tab:StyleButton(nil, true);
+		tab:SetTemplate("Default")
+		tab:StyleButton(nil, true)
 
-		tab:GetNormalTexture():SetInside();
-		tab:GetNormalTexture():SetTexCoord(unpack(E.TexCoords));
+		tab:GetNormalTexture():SetInside()
+		tab:GetNormalTexture():SetTexCoord(unpack(E.TexCoords))
 	end
+
+	PlayerTalentFrameStatusFrame:Point("TOPLEFT", 57, -40)
+	PlayerTalentFrameActivateButton:Point("TOP", 0, -40)
+
+	PlayerTalentFrameScrollFrame:Width(302)
+	PlayerTalentFrameScrollFrame:Point("TOPRIGHT", PlayerTalentFrame, "TOPRIGHT", -62, -77)
+	PlayerTalentFrameScrollFrame:Point("BOTTOM", PlayerTalentFramePointsBar, "TOP", 0, 0)
+
+	PlayerTalentFrameScrollFrameScrollBar:Point("TOPLEFT", PlayerTalentFrameScrollFrame, "TOPRIGHT", 5, -17)
+	PlayerTalentFrameScrollFrameScrollBar:Point("BOTTOMLEFT", PlayerTalentFrameScrollFrame, "BOTTOMRIGHT", 5, 17)
+
+	PlayerTalentFrameResetButton:Point("RIGHT", -4, 1)
+	PlayerTalentFrameLearnButton:Point("RIGHT", PlayerTalentFrameResetButton, "LEFT", -3, 0)
+
+	PlayerTalentFrameTab1:Point("BOTTOMLEFT", 11, 46)
 end
 
-S:AddCallbackForAddon("Blizzard_TalentUI", "Talent", LoadSkin);
+S:AddCallbackForAddon("Blizzard_TalentUI", "Skin_Blizzard_TalentUI", LoadSkin)

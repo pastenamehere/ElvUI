@@ -1,24 +1,43 @@
 local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
-local AB = E:GetModule("ActionBars");
+local AB = E:GetModule("ActionBars")
 
---Cache global variables
 --Lua functions
 local _G = _G
 --WoW API / Variables
 local CreateFrame = CreateFrame
-local UnitLevel = UnitLevel
-local UpdateMicroButtonsParent = UpdateMicroButtonsParent
+local InCombatLockdown = InCombatLockdown
 local RegisterStateDriver = RegisterStateDriver
 
-local function onEnter()
+local MICRO_BUTTONS = {
+	"CharacterMicroButton",
+	"SpellbookMicroButton",
+	"TalentMicroButton",
+	"AchievementMicroButton",
+	"QuestLogMicroButton",
+	"SocialsMicroButton",
+	"PVPMicroButton",
+	"LFDMicroButton",
+	"MainMenuMicroButton",
+	"HelpMicroButton"
+}
+
+local function onEnter(button)
 	if AB.db.microbar.mouseover then
 		E:UIFrameFadeIn(ElvUI_MicroBar, 0.2, ElvUI_MicroBar:GetAlpha(), AB.db.microbar.alpha)
 	end
+
+	if button and button.backdrop then
+		button.backdrop:SetBackdropBorderColor(unpack(E.media.rgbvaluecolor))
+	end
 end
 
-local function onLeave()
+local function onLeave(button)
 	if AB.db.microbar.mouseover then
 		E:UIFrameFadeOut(ElvUI_MicroBar, 0.2, ElvUI_MicroBar:GetAlpha(), 0)
+	end
+
+	if button and button.backdrop then
+		button.backdrop:SetBackdropBorderColor(unpack(E.media.bordercolor))
 	end
 end
 
@@ -38,6 +57,7 @@ function AB:HandleMicroButton(button)
 	button:HookScript("OnEnter", onEnter)
 	button:HookScript("OnLeave", onLeave)
 	button:SetHitRectInsets(0, 0, 0, 0)
+	button:Show()
 
 	pushed:SetTexCoord(0.17, 0.87, 0.5, 0.908)
 	pushed:SetInside(f)
@@ -57,6 +77,8 @@ function AB:UpdateMicroButtonsParent()
 	for i = 1, #MICRO_BUTTONS do
 		_G[MICRO_BUTTONS[i]]:SetParent(ElvUI_MicroBar)
 	end
+
+	AB:UpdateMicroPositionDimensions()
 end
 
 function AB:UpdateMicroBarVisibility()
@@ -67,8 +89,8 @@ function AB:UpdateMicroBarVisibility()
 	end
 
 	local visibility = self.db.microbar.visibility
-	if visibility and visibility:match("[\n\r]") then
-		visibility = visibility:gsub("[\n\r]", "")
+	if visibility and string.match(visibility, "[\n\r]") then
+		visibility = string.gsub(visibility, "[\n\r]", "")
 	end
 
 	RegisterStateDriver(ElvUI_MicroBar.visibility, "visibility", (self.db.microbar.enabled and visibility) or "hide")
@@ -82,10 +104,10 @@ function AB:UpdateMicroPositionDimensions()
 	local offset = E:Scale(E.PixelMode and 1 or 3)
 	local spacing = E:Scale(offset + self.db.microbar.buttonSpacing)
 
-	for i = 1, #SHARED_MICROMENU_BUTTONS do
-		local button = _G[SHARED_MICROMENU_BUTTONS[i]]
+	for i = 1, #MICRO_BUTTONS do
+		local button = _G[MICRO_BUTTONS[i]]
 		local lastColumnButton = i - self.db.microbar.buttonsPerRow
-		lastColumnButton = _G[SHARED_MICROMENU_BUTTONS[lastColumnButton]]
+		lastColumnButton = _G[MICRO_BUTTONS[lastColumnButton]]
 
 		button:Size(self.db.microbar.buttonSize, self.db.microbar.buttonSize * 1.4)
 		button:ClearAllPoints()
@@ -108,8 +130,8 @@ function AB:UpdateMicroPositionDimensions()
 		ElvUI_MicroBar:SetAlpha(self.db.microbar.alpha)
 	end
 
-	AB.MicroWidth = (((_G["CharacterMicroButton"]:GetWidth() + spacing) * self.db.microbar.buttonsPerRow) - spacing) + (offset * 2)
-	AB.MicroHeight = (((_G["CharacterMicroButton"]:GetHeight() + spacing) * numRows) - spacing) + (offset * 2)
+	AB.MicroWidth = (((CharacterMicroButton:GetWidth() + spacing) * self.db.microbar.buttonsPerRow) - spacing) + (offset * 2)
+	AB.MicroHeight = (((CharacterMicroButton:GetHeight() + spacing) * numRows) - spacing) + (offset * 2)
 	ElvUI_MicroBar:Size(AB.MicroWidth, AB.MicroHeight)
 
 	if ElvUI_MicroBar.mover then
@@ -125,15 +147,15 @@ end
 
 function AB:UpdateMicroButtons()
 	-- PvP Micro Button
-	-- PVPMicroButtonTexture:Point("TOPLEFT", PVPMicroButton, "TOPLEFT")
-	-- PVPMicroButtonTexture:Point("BOTTOMRIGHT", PVPMicroButton, "BOTTOMRIGHT")
-	-- PVPMicroButtonTexture:SetTexture("Interface\\AddOns\\ElvUI\\media\\textures\\PVP-Icons")
+	PVPMicroButtonTexture:Point("TOPLEFT", PVPMicroButton, "TOPLEFT")
+	PVPMicroButtonTexture:Point("BOTTOMRIGHT", PVPMicroButton, "BOTTOMRIGHT")
+	PVPMicroButtonTexture:SetTexture("Interface\\AddOns\\ElvUI\\media\\textures\\PVP-Icons")
 
-	-- if UnitLevel("player") < PVPMicroButton.minLevel then
-		-- PVPMicroButtonTexture:SetDesaturated(true)
-	-- else
-		-- PVPMicroButtonTexture:SetDesaturated(false)
-	-- end
+	if E.mylevel < PVPMicroButton.minLevel then
+		PVPMicroButtonTexture:SetDesaturated(true)
+	else
+		PVPMicroButtonTexture:SetDesaturated(false)
+	end
 
 	self:UpdateMicroPositionDimensions()
 end
@@ -141,31 +163,32 @@ end
 function AB:SetupMicroBar()
 	local microBar = CreateFrame("Frame", "ElvUI_MicroBar", E.UIParent)
 	microBar:Point("TOPLEFT", E.UIParent, "TOPLEFT", 4, -48)
+	microBar:SetFrameStrata("LOW")
 	microBar:EnableMouse(true)
 	microBar:SetScript("OnEnter", onEnter)
 	microBar:SetScript("OnLeave", onLeave)
 
-	microBar.visibility = CreateFrame('Frame', nil, E.UIParent, "SecureHandlerStateTemplate")
+	microBar.visibility = CreateFrame("Frame", nil, E.UIParent, "SecureHandlerStateTemplate")
 	microBar.visibility:SetScript("OnShow", function() microBar:Show() end)
 	microBar.visibility:SetScript("OnHide", function() microBar:Hide() end)
 
-	for i = 1, #SHARED_MICROMENU_BUTTONS do
-		self:HandleMicroButton(_G[SHARED_MICROMENU_BUTTONS[i]])
+	for i = 1, #MICRO_BUTTONS do
+		self:HandleMicroButton(_G[MICRO_BUTTONS[i]])
 	end
 
 	MicroButtonPortrait:SetInside(CharacterMicroButton.backdrop)
 
-	-- if E.myfaction == "Alliance"  then
-		-- PVPMicroButtonTexture:SetTexCoord(0.545, 0.935, 0.070, 0.940)
-	-- else
-		-- PVPMicroButtonTexture:SetTexCoord(0.100, 0.475, 0.070, 0.940)
-	-- end
+	if E.myfaction == "Alliance" then
+		PVPMicroButtonTexture:SetTexCoord(0.545, 0.935, 0.070, 0.940)
+	else
+		PVPMicroButtonTexture:SetTexCoord(0.100, 0.475, 0.070, 0.940)
+	end
 
 	self:SecureHook("VehicleMenuBar_MoveMicroButtons", "UpdateMicroButtonsParent")
 	self:SecureHook("UpdateMicroButtons")
 
 	self:UpdateMicroPositionDimensions()
-	-- MainMenuBarPerformanceBar:Kill()
+	MainMenuBarPerformanceBar:Kill()
 
-	E:CreateMover(microBar, "MicrobarMover", L["Micro Bar"], nil, nil, nil, "ALL,ACTIONBARS")
+	E:CreateMover(microBar, "MicrobarMover", L["Micro Bar"], nil, nil, nil, "ALL,ACTIONBARS", nil, "actionbar,microbar")
 end

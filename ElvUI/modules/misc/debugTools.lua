@@ -1,7 +1,11 @@
-local E, L, V, P, G = unpack(select(2, ...)); --Inport: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
-local D = E:NewModule("DebugTools", "AceEvent-3.0", "AceHook-3.0");
+local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local D = E:GetModule("DebugTools")
 
-E.DebugTools = D
+--Lua functions
+local format = string.format
+--WoW API / Variables
+local GetCVarBool = GetCVarBool
+local InCombatLockdown = InCombatLockdown
 
 function D:ModifyErrorFrame()
 	ScriptErrorsFrameScrollFrameText.cursorOffset = 0
@@ -18,12 +22,12 @@ function D:ModifyErrorFrame()
 		-- Sometimes the locals table does not have an entry for an index, which can cause an argument #6 error
 		-- in Blizzard_DebugTools.lua:430 and then cause a C stack overflow, this will prevent that
 		local index = ScriptErrorsFrame.index
-		if( not index or not ScriptErrorsFrame.order[index] ) then
+		if not index or not ScriptErrorsFrame.order[index] then
 			index = #(ScriptErrorsFrame.order)
 		end
 
-		if( index > 0 ) then
-			ScriptErrorsFrame.locals[index] = ScriptErrorsFrame.locals[index] or L["No locals to dump"]
+		if index > 0 then
+			ScriptErrorsFrame.locals[index] = ScriptErrorsFrame.locals[index] or "No locals to dump"
 		end
 
 		Orig_ScriptErrorsFrame_Update(...)
@@ -37,8 +41,10 @@ function D:ModifyErrorFrame()
 		self:HighlightText(0, 0)
 	end)
 
-	ScriptErrorsFrame:SetSize(500, 300)
-	ScriptErrorsFrameScrollFrame:SetSize(ScriptErrorsFrame:GetWidth() - 45, ScriptErrorsFrame:GetHeight() - 71)
+	ScriptErrorsFrame:Size(500, 300)
+	ScriptErrorsFrameScrollFrame:Size(ScriptErrorsFrame:GetWidth() - 45, ScriptErrorsFrame:GetHeight() - 71)
+
+	ScriptErrorsFrameScrollFrameText:Width(ScriptErrorsFrameScrollFrame:GetWidth())
 
 	local BUTTON_WIDTH = 75
 	local BUTTON_HEIGHT = 24
@@ -46,7 +52,7 @@ function D:ModifyErrorFrame()
 
 	-- Add a first button
 	local firstButton = CreateFrame("Button", nil, ScriptErrorsFrame, "UIPanelButtonTemplate")
-	firstButton:SetPoint("BOTTOM", ScriptErrorsFrame, "BOTTOM", -((BUTTON_WIDTH + BUTTON_WIDTH/2) + (BUTTON_SPACING * 4)), 8)
+	firstButton:SetPoint("BOTTOM", -((BUTTON_WIDTH + BUTTON_WIDTH/2) + (BUTTON_SPACING * 4)), 8)
 	firstButton:SetText("First")
 	firstButton:SetHeight(BUTTON_HEIGHT)
 	firstButton:SetWidth(BUTTON_WIDTH)
@@ -79,21 +85,21 @@ function D:ModifyErrorFrame()
 	ScriptErrorsFrame.next:SetHeight(BUTTON_HEIGHT)
 
 	ScriptErrorsFrame.close:ClearAllPoints()
-	ScriptErrorsFrame.close:SetPoint("BOTTOMRIGHT", ScriptErrorsFrame, "BOTTOMRIGHT", -8, 8)
+	ScriptErrorsFrame.close:SetPoint("BOTTOMRIGHT", -8, 8)
 	ScriptErrorsFrame.close:SetSize(75, BUTTON_HEIGHT)
 
 	ScriptErrorsFrame.indexLabel:ClearAllPoints()
-	ScriptErrorsFrame.indexLabel:SetPoint("BOTTOMLEFT", ScriptErrorsFrame, "BOTTOMLEFT", -6, 8)
+	ScriptErrorsFrame.indexLabel:SetPoint("BOTTOMLEFT", 0, 12)
 end
 
 function D:ScriptErrorsFrame_UpdateButtons()
-	local numErrors = #ScriptErrorsFrame.order;
-	local index = ScriptErrorsFrame.index;
-	if ( index == 0 ) then
+	local numErrors = #ScriptErrorsFrame.order
+	local index = ScriptErrorsFrame.index
+	if index == 0 then
 		ScriptErrorsFrame.lastButton:Disable()
 		ScriptErrorsFrame.firstButton:Disable()
 	else
-		if ( numErrors == 1 ) then
+		if numErrors == 1 then
 			ScriptErrorsFrame.lastButton:Disable()
 			ScriptErrorsFrame.firstButton:Disable()
 		else
@@ -104,15 +110,15 @@ function D:ScriptErrorsFrame_UpdateButtons()
 end
 
 function D:ScriptErrorsFrame_OnError(_, keepHidden)
-	if keepHidden or self.MessagePrinted or not InCombatLockdown() or GetCVarBool("scriptErrors") ~= 1 then return; end
+	if keepHidden or self.MessagePrinted or not InCombatLockdown() or GetCVarBool("scriptErrors") ~= 1 then return end
 
 	E:Print(L["|cFFE30000Lua error recieved. You can view the error message when you exit combat."])
-	self.MessagePrinted = true;
+	self.MessagePrinted = true
 end
 
 function D:PLAYER_REGEN_ENABLED()
 	ScriptErrorsFrame:SetParent(UIParent)
-	self.MessagePrinted = nil;
+	self.MessagePrinted = nil
 end
 
 function D:PLAYER_REGEN_DISABLED()
@@ -121,20 +127,21 @@ end
 
 function D:TaintError(event, addonName, addonFunc)
 	if GetCVarBool("scriptErrors") ~= 1 or E.db.general.taintLog ~= true then return end
-	ScriptErrorsFrame_OnError(L["%s: %s tried to call the protected function '%s'."]:format(event, addonName or "<name>", addonFunc or "<func>"), false)
+	ScriptErrorsFrame_OnError(format(L["%s: %s tried to call the protected function '%s'."], event, addonName or "<name>", addonFunc or "<func>"), false)
 end
 
 function D:StaticPopup_Show(name)
-	if(name == "ADDON_ACTION_FORBIDDEN" and E.db.general.taintLog ~= true) then
-		StaticPopup_Hide(name);
+	if name == "ADDON_ACTION_FORBIDDEN" and E.db.general.taintLog ~= true then
+		StaticPopup_Hide(name)
 	end
 end
 
 function D:Initialize()
+	self.Initialized = true
 	self.HideFrame = CreateFrame("Frame")
 	self.HideFrame:Hide()
 
-	if( not IsAddOnLoaded("Blizzard_DebugTools") ) then
+	if not IsAddOnLoaded("Blizzard_DebugTools") then
 		LoadAddOn("Blizzard_DebugTools")
 	end
 

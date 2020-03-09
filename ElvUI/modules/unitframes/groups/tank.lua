@@ -1,11 +1,9 @@
 local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
-local UF = E:GetModule("UnitFrames");
-
+local UF = E:GetModule("UnitFrames")
 local _, ns = ...
 local ElvUF = ns.oUF
 assert(ElvUF, "ElvUI was unable to locate oUF.")
 
---Cache global variables
 --Lua functions
 local max = math.max
 --WoW API / Variables
@@ -27,12 +25,10 @@ function UF:Construct_TankFrames()
 	self.RaidTargetIndicator = UF:Construct_RaidIcon(self)
 	self.MouseGlow = UF:Construct_MouseGlow(self)
 	self.TargetGlow = UF:Construct_TargetGlow(self)
-	self.Range = UF:Construct_Range(self)
+	self.Fader = UF:Construct_Fader()
+	self.Cutaway = UF:Construct_Cutaway(self)
 
 	if not self.isChild then
-		self:SetAttribute("initial-width", UF.db["units"]["tank"].width)
-		self:SetAttribute("initial-height", UF.db["units"]["tank"].height)
-
 		self.Buffs = UF:Construct_Buffs(self)
 		self.Debuffs = UF:Construct_Debuffs(self)
 		self.AuraWatch = UF:Construct_AuraWatch(self)
@@ -41,9 +37,6 @@ function UF:Construct_TankFrames()
 
 		self.unitframeType = "tank"
 	else
-		self:SetAttribute("initial-width", UF.db["units"]["tank"].targetsGroup.width)
-		self:SetAttribute("initial-height", UF.db["units"]["tank"].targetsGroup.height)
-
 		self.unitframeType = "tanktarget"
 	end
 
@@ -52,7 +45,8 @@ function UF:Construct_TankFrames()
 
 	self.originalParent = self:GetParent()
 
-	UF:Update_TankFrames(self, E.db["unitframe"]["units"]["tank"])
+	self.db = UF.db.units.tank
+	self.PostCreate = UF.Update_TankFrames
 
 	return self
 end
@@ -70,7 +64,7 @@ function UF:Update_TankHeader(header, db)
 	if not header.positioned then
 		header:ClearAllPoints()
 		header:Point("TOPLEFT", E.UIParent, "TOPLEFT", 4, -186)
-		E:CreateMover(header, header:GetName().."Mover", L["MT Frames"], nil, nil, nil, "ALL,RAID")
+		E:CreateMover(header, header:GetName().."Mover", L["MT Frames"], nil, nil, nil, "ALL,RAID", nil, "unitframe,tank,generalGroup")
 		header.mover.positionOverride = "TOPLEFT"
 		header:SetAttribute("minHeight", header.dirtyHeight)
 		header:SetAttribute("minWidth", header.dirtyWidth)
@@ -79,7 +73,12 @@ function UF:Update_TankHeader(header, db)
 end
 
 function UF:Update_TankFrames(frame, db)
-	frame.db = db
+	if not db then
+		db = frame.db
+	else
+		frame.db = db
+	end
+
 	frame.colors = ElvUF.colors
 	frame:RegisterForClicks(self.db.targetOnMouseDown and "AnyDown" or "AnyUp")
 
@@ -111,7 +110,6 @@ function UF:Update_TankFrames(frame, db)
 		frame.PORTRAIT_WIDTH = 0
 
 		frame.CLASSBAR_YOFFSET = 0
-		frame.HAPPINESS_WIDTH = 0
 		frame.BOTTOM_OFFSET = 0
 
 		frame.VARIABLES_SET = true
@@ -136,30 +134,38 @@ function UF:Update_TankFrames(frame, db)
 				UnregisterUnitWatch(frame)
 				frame:SetParent(E.HiddenFrame)
 			end
+		else
+			if childDB.enable then
+				frame:SetAttribute("initial-anchor", format("%s,%s,%d,%d", E.InversePoints[childDB.anchorPoint], childDB.anchorPoint, childDB.xOffset, childDB.yOffset))
+				frame:SetAttribute("initial-width", frame.UNIT_WIDTH)
+				frame:SetAttribute("initial-height", frame.UNIT_HEIGHT)
+			end
 		end
-	elseif not InCombatLockdown() then
-		frame:Size(frame.UNIT_WIDTH, frame.UNIT_HEIGHT)
+	else
+		if not InCombatLockdown() then
+			frame:Size(frame.UNIT_WIDTH, frame.UNIT_HEIGHT)
+		else
+			frame:SetAttribute("initial-width", frame.UNIT_WIDTH)
+			frame:SetAttribute("initial-height", frame.UNIT_HEIGHT)
+		end
 	end
 
 	--Health
 	UF:Configure_HealthBar(frame)
 
+	--Name
+	UF:UpdateNameSettings(frame)
+
 	--Threat
 	UF:Configure_Threat(frame)
 
-	--Name
-	do
-		local name = frame.Name
-		name:Point("CENTER", frame.Health, "CENTER")
-		if UF.db.colors.healthclass then
-			frame:Tag(name, "[name:medium]")
-		else
-			frame:Tag(name, "[namecolor][name:medium]")
-		end
-	end
+	--Fader
+	UF:Configure_Fader(frame)
 
-	--Range
-	UF:Configure_Range(frame)
+	--Cutaway
+	UF:Configure_Cutaway(frame)
+
+	UF:Configure_RaidIcon(frame)
 
 	if not frame.isChild then
 		--Auras
@@ -177,7 +183,7 @@ function UF:Update_TankFrames(frame, db)
 		UF:UpdateAuraWatch(frame)
 	end
 
-	frame:UpdateAllElements("ElvUI_UpdateAllElements")
+	frame:UpdateAllElements("ForceUpdate")
 end
 
-UF["headerstoload"]["tank"] = {"MAINTANK", "ELVUI_UNITTARGET"}
+UF.headerstoload.tank = {"MAINTANK", "ELVUI_UNITTARGET"}

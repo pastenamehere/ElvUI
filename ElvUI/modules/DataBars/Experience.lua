@@ -1,22 +1,23 @@
-local E, L, V, P, G = unpack(select(2, ...))
+local E, L, V, P, G = unpack(select(2, ...)); --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
 local mod = E:GetModule("DataBars")
 local LSM = LibStub("LibSharedMedia-3.0")
 
---Cache global variables
 --Lua functions
-local _G = _G
-local format = format
-local min = min
+local min = math.min
+local format = string.format
 --WoW API / Variables
-local GetPetExperience, UnitXP, UnitXPMax = GetPetExperience, UnitXP, UnitXPMax
-local UnitLevel = UnitLevel
-local IsXPUserDisabled, GetXPExhaustion = IsXPUserDisabled, GetXPExhaustion
 local GetExpansionLevel = GetExpansionLevel
-local MAX_PLAYER_LEVEL_TABLE = MAX_PLAYER_LEVEL_TABLE
+local GetPetExperience = GetPetExperience
+local GetXPExhaustion = GetXPExhaustion
 local InCombatLockdown = InCombatLockdown
+local IsXPUserDisabled = IsXPUserDisabled
+local UnitLevel = UnitLevel
+local UnitXP = UnitXP
+local UnitXPMax = UnitXPMax
+local MAX_PLAYER_LEVEL_TABLE = MAX_PLAYER_LEVEL_TABLE
 
 function mod:GetXP(unit)
-	if(unit == "pet") then
+	if unit == "pet" then
 		return GetPetExperience()
 	else
 		return UnitXP(unit), UnitXPMax(unit)
@@ -36,7 +37,7 @@ function mod:UpdateExperience(event)
 		E:EnableMover(self.expBar.mover:GetName())
 		bar:Show()
 
-		if(self.db.experience.hideInVehicle) then
+		if self.db.experience.hideInVehicle then
 			E:RegisterObjectForVehicleLock(bar, E.UIParent)
 		else
 			E:UnregisterObjectForVehicleLock(bar)
@@ -139,7 +140,7 @@ function mod:UpdateExperienceDimensions()
 end
 
 function mod:EnableDisable_ExperienceBar()
-	local maxLevel = MAX_PLAYER_LEVEL_TABLE[GetExpansionLevel()];
+	local maxLevel = MAX_PLAYER_LEVEL_TABLE[GetExpansionLevel()]
 	if (UnitLevel("player") ~= maxLevel or not self.db.experience.hideAtMaxLevel) and self.db.experience.enable then
 		self:RegisterEvent("PLAYER_XP_UPDATE", "UpdateExperience")
 		self:RegisterEvent("DISABLE_XP_GAIN", "UpdateExperience")
@@ -176,6 +177,6 @@ function mod:LoadExperienceBar()
 
 	self:UpdateExperienceDimensions()
 
-	E:CreateMover(self.expBar, "ExperienceBarMover", L["Experience Bar"])
+	E:CreateMover(self.expBar, "ExperienceBarMover", L["Experience Bar"], nil, nil, nil, nil, nil, "databars,experience")
 	self:EnableDisable_ExperienceBar()
 end

@@ -1,38 +1,40 @@
-local E, L, V, P, G = unpack(select(2, ...))
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
 local S = E:GetModule("Skins")
 
+--Lua functions
 local _G = _G
+local type = type
 local unpack = unpack
-
-local UnitIsUnit = UnitIsUnit
+--WoW API / Variables
 
 local function LoadSkin()
-	if E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.misc ~= true then return end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.misc then return end
 
 	-- ESC/Menu Buttons
 	GameMenuFrame:StripTextures()
 	GameMenuFrame:CreateBackdrop("Transparent")
 
-	GameMenuFrameHeader:ClearAllPoints()
-	GameMenuFrameHeader:Point("TOP", GameMenuFrame, 0, 7)
+	GameMenuFrameHeader:Point("TOP", 0, 7)
 
-	local BlizzardMenuButtons = {
-		"Options",
-		"UIOptions",
-		"AudioOptions",
-		"Keybindings",
-		"Macros",
-		"SoundOptions",
-		"Logout",
-		"Quit",
-		"Help",
-		"Continue",
+	local menuButtons = {
+		GameMenuButtonOptions,
+		GameMenuButtonSoundOptions,
+		GameMenuButtonUIOptions,
+	--	GameMenuButtonMacOptions,
+		GameMenuButtonKeybindings,
+		GameMenuButtonMacros,
+	--	GameMenuButtonRatings,
+		GameMenuButtonLogout,
+		GameMenuButtonQuit,
+		GameMenuButtonContinue,
+
+		ElvUI_MenuButton
 	}
 
-	for i = 1, #BlizzardMenuButtons do
-		local ElvuiMenuButtons = _G["GameMenuButton"..BlizzardMenuButtons[i]]
-		if ElvuiMenuButtons then
-			S:HandleButton(ElvuiMenuButtons)
+	for i = 1, #menuButtons do
+		local button = menuButtons[i]
+		if button then
+			S:HandleButton(menuButtons[i])
 		end
 	end
 
@@ -57,8 +59,8 @@ local function LoadSkin()
 		S:HandleEditBox(_G["StaticPopup"..i.."MoneyInputFrameSilver"])
 		S:HandleEditBox(_G["StaticPopup"..i.."MoneyInputFrameCopper"])
 
-		for k = 1, itemFrameBox:GetNumRegions() do
-			local region = select(k, itemFrameBox:GetRegions())
+		for j = 1, itemFrameBox:GetNumRegions() do
+			local region = select(j, itemFrameBox:GetRegions())
 			if region and region:GetObjectType() == "Texture" then
 				if region:GetTexture() == "Interface\\ChatFrame\\UI-ChatInputBorder-Left" or region:GetTexture() == "Interface\\ChatFrame\\UI-ChatInputBorder-Right" then
 					region:Kill()
@@ -67,7 +69,7 @@ local function LoadSkin()
 		end
 
 		closeButton:StripTextures()
-		S:HandleCloseButton(closeButton)
+		S:HandleCloseButton(closeButton, staticPopup)
 
 		itemFrame:GetNormalTexture():Kill()
 		itemFrame:SetTemplate()
@@ -79,7 +81,11 @@ local function LoadSkin()
 
 			if info.hasItemFrame then
 				if data and type(data) == "table" then
-					itemFrame:SetBackdropBorderColor(unpack(data.color or {1, 1, 1, 1}))
+					if data.color then
+						itemFrame:SetBackdropBorderColor(unpack(data.color))
+					else
+						itemFrame:SetBackdropBorderColor(1, 1, 1, 1)
+					end
 				end
 			end
 		end)
@@ -101,18 +107,8 @@ local function LoadSkin()
 
 	-- Other Frames
 	TicketStatusFrameButton:SetTemplate("Transparent")
-
 	AutoCompleteBox:SetTemplate("Transparent")
-
 	ConsolidatedBuffsTooltip:SetTemplate("Transparent")
-
-	if GetLocale() == "koKR" then
-		S:HandleButton(GameMenuButtonRatings)
-
-		RatingMenuFrame:SetTemplate("Transparent")
-		RatingMenuFrameHeader:Kill()
-		S:HandleButton(RatingMenuButtonOkay)
-	end
 
 	-- BNToast Frame
 	BNToastFrame:SetTemplate("Transparent")
@@ -120,9 +116,10 @@ local function LoadSkin()
 	BNToastFrameCloseButton:Size(32)
 	BNToastFrameCloseButton:Point("TOPRIGHT", "BNToastFrame", 4, 4)
 
-	S:HandleCloseButton(BNToastFrameCloseButton)
+	S:HandleCloseButton(BNToastFrameCloseButton, BNToastFrame)
 
 	-- Ready Check Frame
+	ReadyCheckFrame:EnableMouse(true)
 	ReadyCheckFrame:SetTemplate("Transparent")
 
 	S:HandleButton(ReadyCheckFrameYesButton)
@@ -133,20 +130,13 @@ local function LoadSkin()
 	S:HandleButton(ReadyCheckFrameNoButton)
 	ReadyCheckFrameNoButton:SetParent(ReadyCheckFrame)
 	ReadyCheckFrameNoButton:ClearAllPoints()
-	ReadyCheckFrameNoButton:Point("TOPLEFT", ReadyCheckFrame, "CENTER", 3, -5)
+	ReadyCheckFrameNoButton:Point("TOPLEFT", ReadyCheckFrame, "CENTER", 4, -5)
 
 	ReadyCheckFrameText:SetParent(ReadyCheckFrame)
-	ReadyCheckFrameText:ClearAllPoints()
-	ReadyCheckFrameText:SetPoint("TOP", 0, -15)
+	ReadyCheckFrameText:Point("TOP", 0, -15)
 	ReadyCheckFrameText:SetTextColor(1, 1, 1)
 
 	ReadyCheckListenerFrame:SetAlpha(0)
-
-	ReadyCheckFrame:HookScript("OnShow", function(self) -- bug fix, don't show it if initiator
-		if UnitIsUnit("player", self.initiator) then
-			self:Hide()
-		end
-	end)
 
 	-- Coin PickUp Frame
 	CoinPickupFrame:StripTextures()
@@ -162,12 +152,13 @@ local function LoadSkin()
 	-- Stack Split Frame
 	StackSplitFrame:SetTemplate("Transparent")
 	StackSplitFrame:GetRegions():Hide()
+	StackSplitFrame:SetFrameStrata("DIALOG")
 
 	StackSplitFrame.bg1 = CreateFrame("Frame", nil, StackSplitFrame)
+	StackSplitFrame.bg1:SetFrameLevel(StackSplitFrame.bg1:GetFrameLevel() - 1)
 	StackSplitFrame.bg1:SetTemplate("Transparent")
 	StackSplitFrame.bg1:Point("TOPLEFT", 10, -15)
 	StackSplitFrame.bg1:Point("BOTTOMRIGHT", -10, 55)
-	StackSplitFrame.bg1:SetFrameLevel(StackSplitFrame.bg1:GetFrameLevel() - 1)
 
 	S:HandleButton(StackSplitOkayButton)
 	S:HandleButton(StackSplitCancelButton)
@@ -178,8 +169,109 @@ local function LoadSkin()
 
 	S:HandleSliderFrame(OpacityFrameSlider)
 
-	-- Declension Frame
-	if GetLocale() == "ruRU" then
+	-- Channel Pullout Frame
+	ChannelPullout:SetTemplate("Transparent")
+
+	ChannelPulloutBackground:Kill()
+
+	S:HandleTab(ChannelPulloutTab)
+	ChannelPulloutTab:Size(107, 26)
+	ChannelPulloutTabText:Point("LEFT", ChannelPulloutTabLeft, "RIGHT", 0, 4)
+
+	S:HandleCloseButton(ChannelPulloutCloseButton, ChannelPullout)
+	ChannelPulloutCloseButton:Size(32)
+
+	-- Dropdown Menu
+	local checkBoxSkin = E.private.skins.dropdownCheckBoxSkin
+	local menuLevel = 0
+	local maxButtons = 0
+
+	local function skinDropdownMenu()
+		local updateButtons = maxButtons < UIDROPDOWNMENU_MAXBUTTONS
+
+		if updateButtons or menuLevel < UIDROPDOWNMENU_MAXLEVELS then
+			for i = 1, UIDROPDOWNMENU_MAXLEVELS do
+				local frame = _G["DropDownList"..i]
+
+				if not frame.isSkinned then
+					_G["DropDownList"..i.."Backdrop"]:SetTemplate("Transparent")
+					_G["DropDownList"..i.."MenuBackdrop"]:SetTemplate("Transparent")
+
+					if updateButtons then
+						for j = 1, UIDROPDOWNMENU_MAXBUTTONS do
+							local button = _G["DropDownList"..i.."Button"..j]
+
+							if not button.isSkinned then
+								S:HandleButtonHighlight(_G["DropDownList"..i.."Button"..j.."Highlight"])
+
+								if checkBoxSkin then
+									local check = _G["DropDownList"..i.."Button"..j.."Check"]
+									check:Size(12)
+									check:Point("LEFT", 1, 0)
+									check:CreateBackdrop()
+									check:SetTexture(E.media.normTex)
+									check:SetVertexColor(1, 0.82, 0, 0.8)
+								end
+
+								S:HandleColorSwatch(_G["DropDownList"..i.."Button"..j.."ColorSwatch"], 14)
+
+								button.isSkinned = true
+							end
+						end
+					end
+
+					frame.isSkinned = true
+				end
+			end
+
+			menuLevel = UIDROPDOWNMENU_MAXLEVELS
+			maxButtons = UIDROPDOWNMENU_MAXBUTTONS
+		end
+	end
+
+	skinDropdownMenu()
+	hooksecurefunc("UIDropDownMenu_InitializeHelper", skinDropdownMenu)
+
+	-- Chat Menu
+	local chatMenus = {
+		"ChatMenu",
+		"EmoteMenu",
+		"LanguageMenu",
+		"VoiceMacroMenu",
+	}
+
+	for i = 1, #chatMenus do
+		if chatMenus[i] == "ChatMenu" then
+			_G[chatMenus[i]]:HookScript("OnShow", function(self)
+				self:SetTemplate("Transparent")
+				self:SetBackdropColor(unpack(E.media.backdropfadecolor))
+				self:ClearAllPoints()
+				self:Point("BOTTOMLEFT", ChatFrame1, "TOPLEFT", 0, 30)
+			end)
+		else
+			_G[chatMenus[i]]:HookScript("OnShow", function(self)
+				self:SetTemplate("Transparent")
+				self:SetBackdropColor(unpack(E.media.backdropfadecolor))
+			end)
+		end
+	end
+
+	for i = 1, 32 do
+		_G["ChatMenuButton"..i]:StyleButton()
+		_G["EmoteMenuButton"..i]:StyleButton()
+		_G["LanguageMenuButton"..i]:StyleButton()
+		_G["VoiceMacroMenuButton"..i]:StyleButton()
+	end
+
+	local locale = GetLocale()
+	if locale == "koKR" then
+		S:HandleButton(GameMenuButtonRatings)
+
+		RatingMenuFrame:SetTemplate("Transparent")
+		RatingMenuFrameHeader:Kill()
+		S:HandleButton(RatingMenuButtonOkay)
+	elseif locale == "ruRU" then
+		-- Declension Frame
 		DeclensionFrame:SetTemplate("Transparent")
 
 		S:HandleNextPrevButton(DeclensionFrameSetPrev)
@@ -195,61 +287,6 @@ local function LoadSkin()
 			end
 		end
 	end
-
-	-- Channel Pullout Frame
-	ChannelPullout:SetTemplate("Transparent")
-
-	ChannelPulloutBackground:Kill()
-
-	S:HandleTab(ChannelPulloutTab)
-	ChannelPulloutTab:Size(107, 26)
-	ChannelPulloutTabText:Point("LEFT", ChannelPulloutTabLeft, "RIGHT", 0, 4)
-
-	S:HandleCloseButton(ChannelPulloutCloseButton)
-	ChannelPulloutCloseButton:Size(32)
-
-	-- Dropdown Menu
-	hooksecurefunc("UIDropDownMenu_InitializeHelper", function()
-		for i = 1, UIDROPDOWNMENU_MAXLEVELS do
-			_G["DropDownList"..i.."Backdrop"]:SetTemplate("Transparent")
-			_G["DropDownList"..i.."MenuBackdrop"]:SetTemplate("Transparent")
-			for j = 1, UIDROPDOWNMENU_MAXBUTTONS do
-				_G["DropDownList"..i.."Button"..j]:SetFrameLevel(_G["DropDownList"..i.."Backdrop"]:GetFrameLevel() + 1)
-				_G["DropDownList"..i.."Button"..j.."Highlight"]:SetTexture(1, 1, 1, 0.3)
-			end
-		end
-	end)
-
-	-- Chat Menu
-	local ChatMenus = {
-		"ChatMenu",
-		"EmoteMenu",
-		"LanguageMenu",
-		"VoiceMacroMenu",
-	}
-
-	for i = 1, #ChatMenus do
-		if _G[ChatMenus[i]] == _G["ChatMenu"] then
-			_G[ChatMenus[i]]:HookScript("OnShow", function(self)
-				self:SetTemplate("Transparent")
-				self:SetBackdropColor(unpack(E["media"].backdropfadecolor))
-				self:ClearAllPoints()
-				self:Point("BOTTOMLEFT", ChatFrame1, "TOPLEFT", 0, 30)
-			end)
-		else
-			_G[ChatMenus[i]]:HookScript("OnShow", function(self)
-				self:SetTemplate("Transparent")
-				self:SetBackdropColor(unpack(E["media"].backdropfadecolor))
-			end)
-		end
-	end
-
-	for i = 1, 32 do
-		_G["ChatMenuButton"..i]:StyleButton()
-		_G["EmoteMenuButton"..i]:StyleButton()
-		_G["LanguageMenuButton"..i]:StyleButton()
-		_G["VoiceMacroMenuButton"..i]:StyleButton()
-	end
 end
 
-S:AddCallback("SkinMisc", LoadSkin)
+S:AddCallback("Skin_Misc", LoadSkin)

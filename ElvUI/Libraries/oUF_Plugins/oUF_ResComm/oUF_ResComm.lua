@@ -1,15 +1,23 @@
 --[[
 # Element: Resurrect Indicator
+
 Handles the visibility and updating of an indicator based on the unit's incoming resurrect status.
+
 ## Widget
+
 ResurrectIndicator - A `Texture` used to display if the unit has an incoming resurrect.
+
 ## Notes
+
 A default texture will be applied if the widget is a Texture and doesn't have a texture or a color set.
+
 ## Examples
+
     -- Position and size
-    local ResurrectIndicator = self:CreateTexture(nil, "OVERLAY")
+    local ResurrectIndicator = self:CreateTexture(nil, 'OVERLAY')
     ResurrectIndicator:SetSize(16, 16)
-    ResurrectIndicator:SetPoint("TOPRIGHT", self)
+    ResurrectIndicator:SetPoint('TOPRIGHT', self)
+
     -- Register it with oUF
     self.ResurrectIndicator = ResurrectIndicator
 --]]
@@ -20,23 +28,15 @@ assert(oUF, "oUF_ResComm was unable to locate oUF install")
 
 local LRC = LibStub("LibResComm-1.0")
 
-local ipairs = ipairs
+local tremove = table.remove
 
 local UnitIsDead = UnitIsDead
 local UnitIsGhost = UnitIsGhost
 local UnitName = UnitName
 
 local enabledUF, enabled = {}
-local function tsize(t)
-	local i = 0
-	for _ in pairs(t) do
-		i = i + 1
-	end
-	return i
-end
 
 local function Update(self, event, unit, succeeded)
-	if not enabledUF[self] then return end
 	if not unit or self.unit ~= unit then return end
 
 	local element = self.ResurrectIndicator
@@ -56,6 +56,7 @@ local function Update(self, event, unit, succeeded)
 			if event ~= "ResComm_ResStart" then
 				element.ressed = true
 			end
+
 			element:Show()
 			incomingResurrect = true
 		elseif (event == "ResComm_ResEnd" and not succeeded and not element.ressed) or event == "ResComm_ResExpired" then
@@ -103,15 +104,17 @@ local function ResComm_Update(event, ...)
 		target = ...
 	end
 
-	for _, frame in ipairs(oUF.objects) do
-		if frame.unit and frame.ResurrectIndicator and UnitName(frame.unit) == target then
+	for i = 1, #enabledUF do
+		local frame = enabledUF[i]
+
+		if frame.unit and UnitName(frame.unit) == target then
 			Path(frame, event, frame.unit, succeeded)
 		end
 	end
 end
 
 local function ToggleCallbacks(toggle)
-	if toggle and not enabled and tsize(enabledUF) > 0 then
+	if toggle and not enabled and #enabledUF > 0 then
 		LRC.RegisterCallback("oUF_ResComm", "ResComm_CanRes", ResComm_Update)
 		LRC.RegisterCallback("oUF_ResComm", "ResComm_Ressed", ResComm_Update)
 		LRC.RegisterCallback("oUF_ResComm", "ResComm_ResExpired", ResComm_Update)
@@ -119,7 +122,7 @@ local function ToggleCallbacks(toggle)
 		LRC.RegisterCallback("oUF_ResComm", "ResComm_ResEnd", ResComm_Update)
 
 		enabled = true
-	elseif not toggle and enabled and tsize(enabledUF) == 0 then
+	elseif not toggle and enabled and #enabledUF == 0 then
 		LRC.UnregisterCallback("oUF_ResComm", "ResComm_CanRes")
 		LRC.UnregisterCallback("oUF_ResComm", "ResComm_Ressed")
 		LRC.UnregisterCallback("oUF_ResComm", "ResComm_ResExpired")
@@ -132,6 +135,7 @@ end
 
 local function Enable(self)
 	local element = self.ResurrectIndicator
+
 	if element then
 		element.__owner = self
 		element.ForceUpdate = ForceUpdate
@@ -142,7 +146,7 @@ local function Enable(self)
 			element:SetTexture([[Interface\Icons\Spell_Holy_Resurrection]])
 		end
 
-		enabledUF[self] = true
+		enabledUF[#enabledUF + 1] = self
 		ToggleCallbacks(true)
 
 		return true
@@ -151,12 +155,19 @@ end
 
 local function Disable(self)
 	local element = self.ResurrectIndicator
+
 	if element then
 		element:Hide()
 
 		self:UnregisterEvent("UNIT_HEALTH", Path)
 
-		enabledUF[self] = nil
+		for i = 1, #enabledUF do
+			if enabledUF[i] == self then
+				tremove(enabledUF, i)
+				break
+			end
+		end
+
 		ToggleCallbacks(false)
 	end
 end

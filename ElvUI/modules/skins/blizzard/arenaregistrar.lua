@@ -1,79 +1,87 @@
-local E, L, V, P, G = unpack(select(2, ...));
-local S = E:GetModule("Skins");
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local S = E:GetModule("Skins")
 
-local _G = _G;
-local select = select;
+--Lua functions
+local _G = _G
+local select = select
+--WoW API / Variables
 
 local function LoadSkin()
-	if(E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.arenaregistrar ~= true) then return; end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.arenaregistrar then return end
 
-	ArenaRegistrarFrame:CreateBackdrop("Transparent");
-	ArenaRegistrarFrame.backdrop:Point("TOPLEFT", 14, -18);
-	ArenaRegistrarFrame.backdrop:Point("BOTTOMRIGHT", -30, 67);
+	ArenaRegistrarFrame:StripTextures(true)
+	ArenaRegistrarFrame:CreateBackdrop("Transparent")
+	ArenaRegistrarFrame.backdrop:Point("TOPLEFT", 11, -12)
+	ArenaRegistrarFrame.backdrop:Point("BOTTOMRIGHT", -32, 76)
 
-	ArenaRegistrarFrame:StripTextures(true);
+	S:SetUIPanelWindowInfo(ArenaRegistrarFrame, "width")
+	S:SetBackdropHitRect(ArenaRegistrarFrame)
 
-	S:HandleCloseButton(ArenaRegistrarFrameCloseButton);
+	S:HandleCloseButton(ArenaRegistrarFrameCloseButton, ArenaRegistrarFrame.backdrop)
 
-	ArenaRegistrarGreetingFrame:StripTextures();
+	ArenaRegistrarGreetingFrame:StripTextures()
+	ArenaRegistrarGreetingFrame:GetRegions():SetTextColor(1, 1, 1)
 
-	select(1, ArenaRegistrarGreetingFrame:GetRegions()):SetTextColor(1, 1, 1)
-	RegistrationText:SetTextColor(1, 1, 1);
+	RegistrationText:SetTextColor(1, 1, 1)
+	ArenaRegistrarPurchaseText:SetTextColor(1, 1, 1)
 
-	S:HandleButton(ArenaRegistrarFrameGoodbyeButton);
-
-	local registrarButton;
 	for i = 1, MAX_TEAM_BORDERS do
-		registrarButton = select(3, _G["ArenaRegistrarButton" .. i]:GetRegions());
-		registrarButton:SetTextColor(1, 1, 1);
+		select(3, _G["ArenaRegistrarButton"..i]:GetRegions()):SetTextColor(1, 1, 1)
 	end
 
-	ArenaRegistrarPurchaseText:SetTextColor(1, 1, 1);
+	S:HandleButton(ArenaRegistrarFrameGoodbyeButton)
+	S:HandleButton(ArenaRegistrarFrameCancelButton)
+	S:HandleButton(ArenaRegistrarFramePurchaseButton)
 
-	S:HandleButton(ArenaRegistrarFrameCancelButton);
-	S:HandleButton(ArenaRegistrarFramePurchaseButton);
+	select(6, ArenaRegistrarFrameEditBox:GetRegions()):Kill()
+	select(7, ArenaRegistrarFrameEditBox:GetRegions()):Kill()
+	S:HandleEditBox(ArenaRegistrarFrameEditBox)
 
-	select(6, ArenaRegistrarFrameEditBox:GetRegions()):Kill();
-	select(7, ArenaRegistrarFrameEditBox:GetRegions()):Kill();
-	S:HandleEditBox(ArenaRegistrarFrameEditBox);
-	ArenaRegistrarFrameEditBox:Height(18);
+	ArenaRegistrarFrameEditBox:Height(18)
 
-	PVPBannerFrame:CreateBackdrop("Transparent");
-	PVPBannerFrame.backdrop:Point("TOPLEFT", 10, -12);
-	PVPBannerFrame.backdrop:Point("BOTTOMRIGHT", -33, 73);
+	ArenaRegistrarFrameGoodbyeButton:Width(80)
+	ArenaRegistrarFrameGoodbyeButton:Point("BOTTOMRIGHT", -40, 84)
+	ArenaRegistrarFrameCancelButton:Point("BOTTOMRIGHT", -40, 84)
+	ArenaRegistrarFramePurchaseButton:Point("BOTTOMLEFT", 19, 84)
 
-	PVPBannerFrame:StripTextures();
+	-- PVP Banner
+	PVPBannerFrame:StripTextures()
+	PVPBannerFrame:CreateBackdrop("Transparent")
+	PVPBannerFrame.backdrop:Point("TOPLEFT", 11, -12)
+	PVPBannerFrame.backdrop:Point("BOTTOMRIGHT", -32, 76)
 
-	PVPBannerFramePortrait:Kill();
+	S:SetUIPanelWindowInfo(PVPBannerFrame, "width")
+	S:SetBackdropHitRect(PVPBannerFrame)
 
-	PVPBannerFrameCustomizationFrame:StripTextures();
+	S:HandleCloseButton(PVPBannerFrameCloseButton, PVPBannerFrame.backdrop)
 
-	local customization, customizationLeft, customizationRight;
+	PVPBannerFramePortrait:Kill()
+
+	PVPBannerFrameCustomizationFrame:StripTextures()
+
 	for i = 1, 2 do
-		customization = _G["PVPBannerFrameCustomization" .. i];
-		customizationLeft = _G["PVPBannerFrameCustomization" .. i .. "LeftButton"];
-		customizationRight = _G["PVPBannerFrameCustomization" .. i .. "RightButton"];
-
-		customization:StripTextures();
-		S:HandleNextPrevButton(customizationLeft);
-		S:HandleNextPrevButton(customizationRight);
+		_G["PVPBannerFrameCustomization"..i]:StripTextures()
+		S:HandleNextPrevButton(_G["PVPBannerFrameCustomization"..i.."LeftButton"])
+		S:HandleNextPrevButton(_G["PVPBannerFrameCustomization"..i.."RightButton"])
 	end
 
-	local pickerButton;
-	for i = 1, 3 do
-		pickerButton = _G["PVPColorPickerButton" .. i];
-		S:HandleButton(pickerButton);
-		if(i == 2) then
-			pickerButton:Point("TOP", PVPBannerFrameCustomization2, "BOTTOM", 0, -33);
-		elseif(i == 3) then
-			pickerButton:Point("TOP", PVPBannerFrameCustomization2, "BOTTOM", 0, -59);
-		end
-	end
+	S:HandleButton(PVPColorPickerButton1)
+	S:HandleButton(PVPColorPickerButton2)
+	S:HandleButton(PVPColorPickerButton3)
 
-	S:HandleButton(PVPBannerFrameAcceptButton);
-	S:HandleButton(PVPBannerFrameCancelButton);
+	S:HandleButton(PVPBannerFrameAcceptButton)
+	S:HandleButton(PVPBannerFrameCancelButton)
+	local PVPBannerFrameCancelButton2 = select(4, PVPBannerFrame:GetChildren())
+	S:HandleButton(PVPBannerFrameCancelButton2)
 
-	S:HandleCloseButton(PVPBannerFrameCloseButton);
+	PVPBannerFrameCustomization1:Point("TOPLEFT", PVPBannerFrameCustomizationBorder, "TOPLEFT", 48, -50)
+
+	PVPColorPickerButton1:Point("TOP", PVPBannerFrameCustomization2, "BOTTOM", 1, -7)
+	PVPColorPickerButton2:Point("TOP", PVPBannerFrameCustomization2, "BOTTOM", 1, -33)
+	PVPColorPickerButton3:Point("TOP", PVPBannerFrameCustomization2, "BOTTOM", 1, -59)
+
+	PVPBannerFrameCancelButton2:Point("CENTER", PVPBannerFrame, "TOPLEFT", 304, -417)
+	PVPBannerFrameAcceptButton:Point("CENTER", PVPBannerFrame, "TOPLEFT", 221, -417)
 end
 
-S:AddCallback("ArenaRegistrar", LoadSkin);
+S:AddCallback("Skin_ArenaRegistrar", LoadSkin)

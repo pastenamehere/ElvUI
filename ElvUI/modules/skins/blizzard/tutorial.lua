@@ -1,47 +1,46 @@
-local E, L, V, P, G, _ = unpack(select(2, ...));
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
 local S = E:GetModule("Skins")
 
+--Lua functions
+--WoW API / Variables
+
 local function LoadSkin()
-	if E.private.skins.blizzard.enable ~= true or E.private.skins.blizzard.tutorial ~= true then return end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.tutorial then return end
 
-	for i=1, TutorialFrame:GetNumChildren() do
-		local child = select(i, TutorialFrame:GetChildren())
-		if child.GetPushedTexture and child:GetPushedTexture() and not child:GetName() then
-			S:HandleCloseButton(child)
-			child:SetPoint("TOPRIGHT", TutorialFrame, "TOPRIGHT", 2, 4)
-		end
-	end
+	TutorialFrameAlertButton:StripTextures()
+	TutorialFrameAlertButton:CreateBackdrop("Default", true)
+	TutorialFrameAlertButton:Size(50)
 
-	local tutorialbutton = TutorialFrameAlertButton
-	local tutorialbuttonIcon = TutorialFrameAlertButton:GetNormalTexture()
+	local TutorialFrameAlertButtonIcon = TutorialFrameAlertButton:GetNormalTexture()
+	TutorialFrameAlertButtonIcon:SetTexture("INTERFACE\\ICONS\\INV_Letter_18")
+	TutorialFrameAlertButtonIcon:Point("TOPLEFT", 5, -5)
+	TutorialFrameAlertButtonIcon:Point("BOTTOMRIGHT", -5, 5)
+	TutorialFrameAlertButtonIcon:SetTexCoord(unpack(E.TexCoords))
 
-	tutorialbutton:StripTextures()
-	tutorialbutton:CreateBackdrop("Default", true)
-	tutorialbutton:SetWidth(50)
-	tutorialbutton:SetHeight(50)
+	TutorialFrameBackground:Hide()
+--	TutorialFrameTop:Hide()
+--	TutorialFrameBottom:Hide()
+	TutorialFrame:DisableDrawLayer("BORDER")
 
-	tutorialbuttonIcon:SetTexture("INTERFACE\\ICONS\\INV_Letter_18")
-	tutorialbuttonIcon:ClearAllPoints()
-	tutorialbuttonIcon:SetPoint("TOPLEFT", TutorialFrameAlertButton, "TOPLEFT", 5, -5)
-	tutorialbuttonIcon:SetPoint("BOTTOMRIGHT", TutorialFrameAlertButton, "BOTTOMRIGHT", -5, 5)
-	tutorialbuttonIcon:SetTexCoord(unpack(E.TexCoords))
+	TutorialFrame:CreateBackdrop("Transparent")
+	TutorialFrame.backdrop:Point("TOPLEFT", 11, -12)
+	TutorialFrame.backdrop:Point("BOTTOMRIGHT", -1, 2)
 
-	TutorialFrame:StripTextures()
-	TutorialFrame:SetTemplate("Transparent")
+	TutorialFrameTitle:Point("TOP", 0, -19)
+
+	S:HandleCloseButton((select(4, TutorialFrame:GetChildren())), TutorialFrame.backdrop)
 
 	S:HandleNextPrevButton(TutorialFrameNextButton)
-	TutorialFrameNextButton:SetPoint("BOTTOMRIGHT", TutorialFrame, "BOTTOMRIGHT", -132, 7)
-	TutorialFrameNextButton:SetWidth(22)
-	TutorialFrameNextButton:SetHeight(22)
+	TutorialFrameNextButton:Point("BOTTOMRIGHT", -132, 7)
+	TutorialFrameNextButton:Size(22)
 
 	S:HandleNextPrevButton(TutorialFramePrevButton)
-	TutorialFramePrevButton:SetPoint("BOTTOMLEFT", TutorialFrame, "BOTTOMLEFT", 30, 7)
-	TutorialFramePrevButton:SetWidth(22)
-	TutorialFramePrevButton:SetHeight(22)
+	TutorialFramePrevButton:Point("BOTTOMLEFT", 30, 7)
+	TutorialFramePrevButton:Size(22)
 
 	S:HandleButton(TutorialFrameOkayButton)
 
 	TutorialFrameCallOut:Kill()
 end
 
-S:AddCallback("Tutorial", LoadSkin);
+S:AddCallback("Skin_Tutorial", LoadSkin)

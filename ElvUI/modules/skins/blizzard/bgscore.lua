@@ -1,91 +1,104 @@
-local E, L, V, P, G = unpack(select(2, ...));
-local S = E:GetModule("Skins");
+local E, L, V, P, G = unpack(select(2, ...)) --Import: Engine, Locales, PrivateDB, ProfileDB, GlobalDB
+local S = E:GetModule("Skins")
 
-local split = string.split;
+--Lua functions
+local format, split = string.format, string.split
+--WoW API / Variables
+local FauxScrollFrame_GetOffset = FauxScrollFrame_GetOffset
+local GetBattlefieldScore = GetBattlefieldScore
+local IsActiveBattlefieldArena = IsActiveBattlefieldArena
+local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local function LoadSkin()
-	if(E.private.skins.blizzard.enable ~= true
-		or E.private.skins.blizzard.bgscore ~= true)
-	then
-		return;
-	end
+	if not E.private.skins.blizzard.enable or not E.private.skins.blizzard.bgscore then return end
 
-	WorldStateScoreFrame:CreateBackdrop("Transparent");
-	WorldStateScoreFrame.backdrop:Point("TOPLEFT", 10, -15);
-	WorldStateScoreFrame.backdrop:Point("BOTTOMRIGHT", -113, 67);
+	WorldStateScoreFrame:StripTextures()
+	WorldStateScoreFrame:CreateBackdrop("Transparent")
+	WorldStateScoreFrame.backdrop:Point("TOPLEFT", 10, -15)
+	WorldStateScoreFrame.backdrop:Point("BOTTOMRIGHT", -113, 67)
 
-	WorldStateScoreFrame:StripTextures();
+	WorldStateScoreFrame:EnableMouse(true)
+	S:SetBackdropHitRect(WorldStateScoreFrame)
 
-	WorldStateScoreScrollFrame:StripTextures();
-	S:HandleScrollBar(WorldStateScoreScrollFrameScrollBar);
+	S:HandleCloseButton(WorldStateScoreFrameCloseButton, WorldStateScoreFrame.backdrop)
 
-	local tab
-	for i = 1, 3 do
-		tab = _G["WorldStateScoreFrameTab"..i];
+	WorldStateScoreScrollFrame:StripTextures()
+	S:HandleScrollBar(WorldStateScoreScrollFrameScrollBar)
 
-		S:HandleTab(tab);
-
-		_G["WorldStateScoreFrameTab"..i.."Text"]:Point("CENTER", 0, 2);
-	end
-
-	S:HandleButton(WorldStateScoreFrameLeaveButton);
-	S:HandleCloseButton(WorldStateScoreFrameCloseButton);
-
-	WorldStateScoreFrameName:StyleButton()
-	WorldStateScoreFrameTeam:StyleButton()
 	WorldStateScoreFrameKB:StyleButton()
 	WorldStateScoreFrameDeaths:StyleButton()
 	WorldStateScoreFrameHK:StyleButton()
 	WorldStateScoreFrameDamageDone:StyleButton()
 	WorldStateScoreFrameHealingDone:StyleButton()
-	WorldStateScoreFrameTeamSkill:StyleButton()
 	WorldStateScoreFrameHonorGained:StyleButton()
+	WorldStateScoreFrameName:StyleButton()
+	WorldStateScoreFrameClass:StyleButton()
+	WorldStateScoreFrameTeam:StyleButton()
+--	WorldStateScoreFrameRatingChange:StyleButton()
+
+	S:HandleButton(WorldStateScoreFrameLeaveButton)
+
+	for i = 1, 3 do
+		S:HandleTab(_G["WorldStateScoreFrameTab"..i])
+		_G["WorldStateScoreFrameTab"..i.."Text"]:Point("CENTER", 0, 2)
+	end
+
+	WorldStateScoreFrameTab2:Point("LEFT", WorldStateScoreFrameTab1, "RIGHT", -15, 0)
+	WorldStateScoreFrameTab3:Point("LEFT", WorldStateScoreFrameTab2, "RIGHT", -15, 0)
+
+	WorldStateScoreScrollFrameScrollBar:Point("TOPLEFT", WorldStateScoreScrollFrame, "TOPRIGHT", 9, -20)
+	WorldStateScoreScrollFrameScrollBar:Point("BOTTOMLEFT", WorldStateScoreScrollFrame, "BOTTOMRIGHT", 9, 37)
 
 	for i = 1, 5 do
 		_G["WorldStateScoreColumn"..i]:StyleButton()
 	end
 
+	local myName = format("> %s <", E.myname)
+
 	hooksecurefunc("WorldStateScoreFrame_Update", function()
 		local inArena = IsActiveBattlefieldArena()
 		local offset = FauxScrollFrame_GetOffset(WorldStateScoreScrollFrame)
 
-		for i = 1, MAX_WORLDSTATE_SCORE_BUTTONS do
-			local index = offset + i
-			local name, _, _, _, _, faction, _, _, _, classToken = GetBattlefieldScore(index)
-			if(name) then
-				local n, r = split("-", name, 2)
-				local myName = UnitName("player")
+		local _, name, faction, classToken, realm, classTextColor, nameText
 
-				if(name == myName) then
-					n = "> "..n.." <"
+		for i = 1, MAX_WORLDSTATE_SCORE_BUTTONS do
+			name, _, _, _, _, faction, _, _, _, classToken = GetBattlefieldScore(offset + i)
+
+			if name then
+				name, realm = split("-", name, 2)
+
+				if name == E.myname then
+					name = myName
 				end
 
-				if(r) then
+				if realm then
 					local color
-					if(inArena) then
-						if(faction == 1) then
+
+					if inArena then
+						if faction == 1 then
 							color = "|cffffd100"
 						else
 							color = "|cff19ff19"
 						end
 					else
-						if(faction == 1) then
+						if faction == 1 then
 							color = "|cff00adf0"
 						else
 							color = "|cffff1919"
 						end
 					end
-					r = color..r.."|r"
-					n = n.."|cffffffff - |r"..r
+
+					name = format("%s|cffffffff - |r%s%s|r", name, color, realm)
 				end
 
-				local classTextColor = CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[classToken] or RAID_CLASS_COLORS[classToken]
+				classTextColor = CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[classToken] or RAID_CLASS_COLORS[classToken]
 
-				_G["WorldStateScoreButton"..i.."NameText"]:SetText(n)
-				_G["WorldStateScoreButton"..i.."NameText"]:SetTextColor(classTextColor.r, classTextColor.g, classTextColor.b)
+				nameText = _G["WorldStateScoreButton"..i.."NameText"]
+				nameText:SetText(name)
+				nameText:SetTextColor(classTextColor.r, classTextColor.g, classTextColor.b)
 			end
 		end
 	end)
 end
 
-S:AddCallback("WorldStateScore", LoadSkin);
+S:AddCallback("Skin_WorldStateScore", LoadSkin)
