@@ -339,6 +339,7 @@ function mod:StyleFilterSetChanges(frame, actions, HealthColorChanged, BorderCha
 		if frame.Health:IsShown() then frame.Health:Hide() end
 		--hide the target indicator
 		mod:Configure_Glow(frame)
+		mod:Update_Glow(frame)
 		--position the name and update its color
 		frame.Name:ClearAllPoints()
 		frame.Name:SetJustifyH("CENTER")
@@ -364,6 +365,8 @@ function mod:StyleFilterSetChanges(frame, actions, HealthColorChanged, BorderCha
 		frame.Level:Hide()
 		frame.Name:Hide()
 		mod:Configure_Glow(frame)
+		mod:Update_Glow(frame)
+		mod:Configure_IconOnlyGlow(frame)
 		mod:Configure_NameOnlyGlow(frame)
 		if not NameColorChanged then
 			mod:Update_Name(frame, true)
@@ -428,6 +431,7 @@ function mod:StyleFilterClearChanges(frame, HealthColorChanged, BorderChanged, F
 		if mod.db.units[frame.UnitType].health.enable or (frame.isTarget and mod.db.alwaysShowTargetHealth) then
 			frame.Health:Show()
 			mod:Configure_Glow(frame)
+			mod:Update_Glow(frame)
 		end
 		if mod.db.units[frame.UnitType].name.enable then
 			frame.Name:ClearAllPoints()
@@ -450,6 +454,7 @@ function mod:StyleFilterClearChanges(frame, HealthColorChanged, BorderChanged, F
 		if mod.db.units[frame.UnitType].health.enable or (frame.isTarget and mod.db.alwaysShowTargetHealth) then
 			frame.Health:Show()
 			mod:Configure_Glow(frame)
+			mod:Update_Glow(frame)
 		end
 		if mod.db.units[frame.UnitType].name.level then
 			frame.Level:Show()
@@ -461,6 +466,7 @@ function mod:StyleFilterClearChanges(frame, HealthColorChanged, BorderChanged, F
 			mod:Update_Level(frame)
 			mod:Update_Name(frame)
 		end
+		mod:Configure_IconOnlyGlow(frame)
 		mod:Configure_NameOnlyGlow(frame)
 	end
 end
@@ -503,10 +509,10 @@ function mod:StyleFilterConditionCheck(frame, filter, trigger)
 		if UnitExists("target") then passed = true else return end
 	end
 
-	-- Unit Combat
-	if trigger.inCombatUnit or trigger.outOfCombatUnit then
+	-- Player Combat
+	if trigger.inCombat or trigger.outOfCombat then
 		local inCombat = UnitAffectingCombat("player")
-		if (trigger.inCombatUnit and inCombat) or (trigger.outOfCombatUnit and not inCombat) then passed = true else return end
+		if (trigger.inCombat and inCombat) or (trigger.outOfCombat and not inCombat) then passed = true else return end
 	end
 
 	-- Player Target
@@ -733,7 +739,7 @@ function mod:StyleFilterConfigure()
 							break
 				end end end
 
-				if t.inCombat or t.outOfCombat or t.inCombatUnit or t.outOfCombatUnit then
+				if t.inCombat or t.outOfCombat then
 					mod.StyleFilterTriggerEvents.PLAYER_REGEN_DISABLED = true
 					mod.StyleFilterTriggerEvents.PLAYER_REGEN_ENABLED = true
 				end

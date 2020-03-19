@@ -285,6 +285,7 @@ P.nameplates = {
 	showEnemyCombat = "DISABLED",
 
 	nameColoredGlow = false,
+	highlight = true,
 
 	cutawayHealth = false,
 	cutawayHealthLength = 0.3,
@@ -392,6 +393,7 @@ P.nameplates = {
 			name = {
 				enable = true,
 				useClassColor = true,
+				abbrev = false,
 				font = "PT Sans Narrow",
 				fontOutline = "OUTLINE",
 				fontSize = 11
@@ -518,6 +520,7 @@ P.nameplates = {
 			name = {
 				enable = true,
 				useClassColor = true,
+				abbrev = false,
 				font = "PT Sans Narrow",
 				fontOutline = "OUTLINE",
 				fontSize = 11
@@ -650,6 +653,7 @@ P.nameplates = {
 			},
 			name = {
 				enable = true,
+				abbrev = false,
 				font = "PT Sans Narrow",
 				fontOutline = "OUTLINE",
 				fontSize = 11
@@ -789,6 +793,7 @@ P.nameplates = {
 			},
 			name = {
 				enable = true,
+				abbrev = false,
 				font = "PT Sans Narrow",
 				fontOutline = "OUTLINE",
 				fontSize = 11

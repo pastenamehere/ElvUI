@@ -71,6 +71,113 @@ function M:Minimap_OnMouseUp(btn)
 	end
 end
 
+local isResetting
+local function ResetZoom()
+	Minimap:SetZoom(0)
+	isResetting = nil
+end
+local function SetupZoomReset(self, zoomLevel)
+	if not isResetting and zoomLevel > 0 and E.db.general.minimap.resetZoom.enable then
+		isResetting = true
+		E:Delay(E.db.general.minimap.resetZoom.time, ResetZoom)
+	end
+end
+
+local function MinimapPostDrag()
+	MinimapCluster:ClearAllPoints()
+	MinimapCluster:SetAllPoints(Minimap)
+	MinimapBackdrop:ClearAllPoints()
+	MinimapBackdrop:SetAllPoints(Minimap)
+end
+
+function M:Initialize()
+	menuFrame:SetTemplate("Transparent", true)
+
+	self:UpdateSettings()
+
+	if not E.private.general.minimap.enable then
+		Minimap:SetMaskTexture("Textures\\MinimapMask")
+		return
+	end
+
+	--Support for other mods
+	function GetMinimapShape()
+		return "SQUARE"
+	end
+
+	local mmholder = CreateFrame("Frame", "MMHolder", Minimap)
+	mmholder:Point("TOPRIGHT", E.UIParent, "TOPRIGHT", -3, -3)
+	mmholder:Width((Minimap:GetWidth() + 29) + E.RBRWidth)
+	mmholder:Height(Minimap:GetHeight() + 53)
+	Minimap:ClearAllPoints()
+	if E.db.general.reminder.position == "LEFT" then
+		Minimap:Point("TOPRIGHT", mmholder, "TOPRIGHT", -E.Border, -E.Border)
+	else
+		Minimap:Point("TOPLEFT", mmholder, "TOPLEFT", E.Border, -E.Border)
+	end
+	Minimap:SetMaskTexture("Interface\\ChatFrame\\ChatFrameBackground")
+	Minimap:CreateBackdrop()
+	Minimap:SetFrameLevel(Minimap:GetFrameLevel() + 2)
+	Minimap:HookScript("OnEnter", function(mm)
+		if E.db.general.minimap.locationText ~= "MOUSEOVER" or not E.private.general.minimap.enable then return end
+		mm.location:Show()
+	end)
+
+	Minimap:HookScript("OnLeave", function(self)
+		if E.db.general.minimap.locationText ~= "MOUSEOVER" or not E.private.general.minimap.enable then return end
+		self.location:Hide()
+	end)
+
+	Minimap.location = Minimap:CreateFontString(nil, "OVERLAY")
+	Minimap.location:FontTemplate(nil, nil, "OUTLINE")
+	Minimap.location:Point("TOP", Minimap, "TOP", 0, -2)
+	Minimap.location:SetJustifyH("CENTER")
+	Minimap.location:SetJustifyV("MIDDLE")
+	if E.db.general.minimap.locationText ~= "SHOW" or not E.private.general.minimap.enable then
+		Minimap.location:Hide()
+	end
+
+	MinimapBorder:Hide()
+	MinimapBorderTop:Hide()
+	MinimapZoomIn:Hide()
+	MinimapZoomOut:Hide()
+	MiniMapVoiceChatFrame:Hide()
+	MinimapNorthTag:Kill()
+	MinimapZoneTextButton:Hide()
+	MiniMapTracking:Kill()
+	MiniMapMailBorder:Hide()
+	MiniMapMailIcon:SetTexture(E.Media.Textures.Mail)
+
+	MiniMapLFGFrameBorder:Hide()
+
+	MiniMapWorldMapButton:Hide()
+
+	MiniMapInstanceDifficulty:SetParent(Minimap)
+
+	if TimeManagerClockButton then
+		TimeManagerClockButton:Kill()
+	else
+		self:RegisterEvent("ADDON_LOADED")
+	end
+
+	E:CreateMover(MMHolder, "MinimapMover", L["Minimap"], nil, nil, MinimapPostDrag, nil, nil, "maps,minimap")
+
+	Minimap:EnableMouseWheel(true)
+	Minimap:SetScript("OnMouseWheel", M.Minimap_OnMouseWheel)
+	Minimap:SetScript("OnMouseUp", M.Minimap_OnMouseUp)
+
+	self:RegisterEvent("ZONE_CHANGED_NEW_AREA", "Update_ZoneText")
+	self:RegisterEvent("ZONE_CHANGED", "Update_ZoneText")
+	self:RegisterEvent("ZONE_CHANGED_INDOORS", "Update_ZoneText")
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", "Update_ZoneText")
+
+	hooksecurefunc(Minimap, "SetZoom", SetupZoomReset)
+
+	self:CreateFarmModeMap()
+
+	self.Initialized = true
+end
+
 Minimap:SetScript("OnMouseUp", M.Minimap_OnMouseUp)
 if FarmModeMap then
 	FarmModeMap:SetScript("OnMouseUp", M.Minimap_OnMouseUp)
