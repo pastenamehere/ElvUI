@@ -4,6 +4,7 @@ local CH = E:GetModule("Chat")
 local ElvBlue = E:TextureString(E.Media.ChatLogos.ElvBlue, ":13:25")
 local Vakh = E:TextureString([[Interface\AddOns\ElvUI_Sirus\Media\ChatLogos\Vakh]], ":16:16")
 local Dodzo = E:TextureString([[Interface\AddOns\ElvUI_Sirus\Media\ChatLogos\Dodzo]], ":16:16")
+local ElvRed = E:TextureString(E.Media.ChatLogos.ElvRed, ":13:25")
 local specialChatIcons = {
 	["Лизь-Scourge x2 - 3.3.5a+"] = ElvRed,
 	["Крольчонок-Scourge x2 - 3.3.5a+"] = ElvBlue,
